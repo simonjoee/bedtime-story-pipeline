@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>睡前故事视频生成器</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .button-container {
+            text-align: center;
+        }
+        button {
+            padding: 12px 40px;
+            font-size: 18px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        #progress {
+            margin-top: 30px;
+            display: none;
+        }
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            color: #666;
+        }
+        progress {
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+        }
+        progress::-webkit-progress-bar {
+            background-color: #e0e0e0;
+            border-radius: 6px;
+        }
+        progress::-webkit-progress-value {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 6px;
+        }
+        #result {
+            margin-top: 30px;
+            text-align: center;
+        }
+        video {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        .download-btn {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 30px;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 20px;
+            transition: background 0.3s;
+        }
+        .download-btn:hover {
+            background: #45a049;
+        }
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-left: 4px solid #c62828;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .container { padding: 20px; }
+            h1 { font-size: 22px; }
+            textarea { height: 150px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌙 睡前故事视频生成器</h1>
+        <textarea id="story" placeholder="在这里输入你的睡前故事...
+
+例如：
+从前有座山，山上有座庙，庙里有个老和尚在讲故事。"></textarea>
+        <div class="button-container">
+            <button id="generate" onclick="generateVideo()">生成视频</button>
+        </div>
+        <div id="progress">
+            <div class="progress-info">
+                <span>状态: <span id="status">等待中</span></span>
+                <span id="progressText">0%</span>
+            </div>
+            <progress id="progressBar" value="0" max="100"></progress>
+        </div>
+        <div id="result"></div>
+    </div>
+    <script>
+        function showError(message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `<div class="error">${message}</div>`;
+        }
+        
+        function showVideo(videoUrl) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <video controls src="${videoUrl}"></video>
+                <br>
+                <a href="${videoUrl}" class="download-btn" download>下载视频</a>
+            `;
+        }
+        
+        function updateProgress(status, progress) {
+            document.getElementById('status').textContent = status;
+            document.getElementById('progressBar').value = progress;
+            document.getElementById('progressText').textContent = progress + '%';
+        }
+        
+        async function generateVideo() {
+            const story = document.getElementById('story').value;
+            if (!story.trim()) {
+                showError('请输入故事内容');
+                return;
+            }
+            
+            document.getElementById('generate').disabled = true;
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('result').innerHTML = '';
+            updateProgress('提交任务中...', 0);
+            
+            try {
+                const resp = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({story_text: story})
+                });
+                const data = await resp.json();
+                
+                if (data.error) {
+                    showError('错误: ' + data.error.message);
+                    document.getElementById('generate').disabled = false;
+                    return;
+                }
+                
+                pollStatus(data.task_id);
+            } catch (e) {
+                showError('网络错误: ' + e.message);
+                document.getElementById('generate').disabled = false;
+            }
+        }
+        
+        async function pollStatus(taskId) {
+            const statusMap = {
+                'processing': '处理中...',
+                'completed': '已完成',
+                'failed': '失败',
+                'cancelled': '已取消'
+            };
+            
+            while (true) {
+                try {
+                    const resp = await fetch(`/api/task/${taskId}`);
+                    const data = await resp.json();
+                    
+                    if (data.error) {
+                        showError('错误: ' + data.error.message);
+                        break;
+                    }
+                    
+                    updateProgress(statusMap[data.status] || data.status, data.progress);
+                    
+                    if (data.status === 'completed') {
+                        showVideo(data.video_url);
+                        break;
+                    }
+                    if (data.status === 'failed') {
+                        showError('生成失败: ' + (data.error?.message || '未知错误'));
+                        break;
+                    }
+                    if (data.status === 'cancelled') {
+                        showError('任务已取消');
+                        break;
+                    }
+                    await new Promise(r => setTimeout(r, 2000));
+                } catch (e) {
+                    showError('网络错误: ' + e.message);
+                    break;
+                }
+            }
+            document.getElementById('generate').disabled = false;
+        }
+    </script>
+</body>
+</html>
