@@ -26,7 +26,8 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/")
 async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    base_path = os.getenv("BASE_PATH", "")
+    return templates.TemplateResponse("index.html", {"request": request, "base_path": base_path})
 
 image_service = ImageService()
 tts_service = TTSService()

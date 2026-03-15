@@ -157,17 +157,20 @@
         <div id="result"></div>
     </div>
     <script>
+        const basePath = "{{ base_path }}";
+        
         function showError(message) {
             const resultDiv = document.getElementById('result');
             resultDiv.innerHTML = `<div class="error">${message}</div>`;
         }
         
         function showVideo(videoUrl) {
+            const fullUrl = videoUrl.startsWith('http') ? videoUrl : basePath + videoUrl;
             const resultDiv = document.getElementById('result');
             resultDiv.innerHTML = `
-                <video controls src="${videoUrl}"></video>
+                <video controls src="${fullUrl}"></video>
                 <br>
-                <a href="${videoUrl}" class="download-btn" download>下载视频</a>
+                <a href="${fullUrl}" class="download-btn" download>下载视频</a>
             `;
         }
         
@@ -190,7 +193,7 @@
             updateProgress('提交任务中...', 0);
             
             try {
-                const resp = await fetch('/api/generate', {
+                const resp = await fetch(basePath + '/api/generate', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({story_text: story})
@@ -220,7 +223,7 @@
             
             while (true) {
                 try {
-                    const resp = await fetch(`/api/task/${taskId}`);
+                    const resp = await fetch(basePath + '/api/task/' + taskId);
                     const data = await resp.json();
                     
                     if (data.error) {
@@ -231,7 +234,7 @@
                     updateProgress(statusMap[data.status] || data.status, data.progress);
                     
                     if (data.status === 'completed') {
-                        showVideo(data.video_url);
+                        showVideo(basePath + data.video_url);
                         break;
                     }
                     if (data.status === 'failed') {
