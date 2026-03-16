@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 睡前故事生成器</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #a29bfe;
+            --bg: #f8f9fa;
+            --text: #2d3436;
+            --card: #ffffff;
+            --success: #00b894;
+            --warning: #fdcb6e;
+            --error: #ff7675;
+        }
+        
+        * { box-sizing: border-box; outline: none; }
+        body {
+            font-family: 'Nunito', "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+        
+        .app-container {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--card);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.05);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+        
+        h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 1px; }
+        .subtitle { opacity: 0.8; margin-top: 8px; font-size: 14px; }
+        
+        .tabs {
+            display: flex;
+            background: #f1f2f6;
+            padding: 6px;
+            margin: 20px 30px;
+            border-radius: 12px;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 600;
+            color: #636e72;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        
+        .content-area {
+            padding: 0 30px 30px;
+            flex: 1;
+        }
+        
+        .tab-pane { display: none; animation: fadeIn 0.4s ease; }
+        .tab-pane.active { display: block; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        textarea {
+            width: 100%;
+            height: 180px;
+            padding: 20px;
+            border: 2px solid #dfe6e9;
+            border-radius: 16px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            resize: none;
+            margin-bottom: 20px;
+        }
+        
+        textarea:focus { border-color: var(--primary); }
+        
+        .action-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(108, 92, 231, 0.3);
+        }
+        
+        .action-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+        }
+        
+        .stat-value { font-size: 32px; font-weight: 700; color: var(--primary); }
+        .stat-label { color: #b2bec3; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; }
+        
+        /* Table */
+        .table-container {
+            border: 1px solid #edf2f7;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        
+        table { width: 100%; border-collapse: collapse; }
+        
+        th {
+            background: #f8f9fa;
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            color: #636e72;
+            font-size: 14px;
+        }
+        
+        td {
+            padding: 16px;
+            border-top: 1px solid #edf2f7;
+            font-size: 14px;
+            color: #2d3436;
+        }
+        
+        tr:hover td { background: #fdfdfd; }
+        
+        /* Status Badges */
+        .badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .badge.processing { background: #fff3cd; color: #e67e22; }
+        .badge.completed { background: #d4edda; color: #00b894; }
+        .badge.failed { background: #f8d7da; color: #ff7675; }
+        .badge.cancelled { background: #e2e3e5; color: #636e72; }
+        
+        /* Progress Bar */
+        .progress-track {
+            background: #dfe6e9;
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            width: 100px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--success);
+            transition: width 0.5s ease;
+        }
+        
+        /* Buttons */
+        .btn-sm {
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 5px;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        
+        .btn-view { background: #e0e7ff; color: var(--primary); }
+        .btn-view:hover { background: var(--primary); color: white; }
+        
+        .btn-cancel { background: #ffebee; color: var(--error); }
+        .btn-cancel:hover { background: var(--error); color: white; }
+        
+        .empty-state {
+            padding: 60px;
+            text-align: center;
+            color: #b2bec3;
+        }
+        
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding-top: 20px;
+            gap: 10px;
+        }
+        
+        .page-btn {
+            padding: 8px 16px;
+            border: 1px solid #dfe6e9;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #636e72;
+        }
+        
+        .page-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+        .page-btn:disabled { opacity: 0.5; cursor: default; }
+        
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            z-index: 100;
+        }
+        
+        .modal-overlay.active { display: flex; }
+        
+        .modal-card {
+            background: white;
+            width: 90%;
+            max-width: 600px;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        .modal-header { display: flex; justify-content: space-between; margin-bottom: 24px; }
+        .modal-title { font-size: 20px; font-weight: 700; }
+        .close-modal { background: none; border: none; font-size: 24px; cursor: pointer; color: #b2bec3; }
+        
+        .detail-item { margin-bottom: 16px; }
+        .detail-label { font-size: 12px; color: #b2bec3; text-transform: uppercase; margin-bottom: 4px; }
+        .detail-content { font-size: 15px; color: var(--text); background: #f8f9fa; padding: 12px; border-radius: 8px; }
+        
+        video { width: 100%; border-radius: 12px; margin-top: 10px; }
+        
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .app-container { border-radius: 0; min-height: 100vh; }
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>AI 睡前故事生成器</h1>
+            <div class="subtitle">为您的孩子创造魔法般的睡前时光 ✨</div>
+        </header>
+        
+        <div class="tabs">
+            <button class="tab-btn" onclick="showTab('generate')" id="nav-generate">✨ 生成故事</button>
+            <button class="tab-btn active" onclick="showTab('tasks')" id="nav-tasks">📋 历史任务</button>
+        </div>
+        
+        <div class="content-area">
+            <!-- Generate Tab -->
+            <div id="tab-generate" class="tab-pane">
+                <textarea id="story" placeholder="请输入故事内容... 例如：一只勇敢的小兔子在魔法森林里寻找丢失的星星..."></textarea>
+                <div style="text-align: center;">
+                    <button class="action-btn" id="generateBtn" onclick="generateVideo()">
+                        <span>🎬 开始生成视频</span>
+                    </button>
+                </div>
+                
+                <div id="progress" style="display:none; margin-top: 30px; text-align: center;">
+                    <div style="color: #636e72; margin-bottom: 10px;">
+                        <span id="status">正在处理</span> <span id="progressText">0%</span>
+                    </div>
+                    <div class="progress-track" style="width: 100%; height: 10px;">
+                        <div id="progressBar" class="progress-fill" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <div id="result" style="margin-top: 30px;"></div>
+            </div>
+            
+            <!-- Tasks Tab -->
+            <div id="tab-tasks" class="tab-pane active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalCount">-</div>
+                        <div class="stat-label">总任务</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="processingCount">-</div>
+                        <div class="stat-label">处理中</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="completedCount">-</div>
+                        <div class="stat-label">已完成</div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th width="15%">任务ID</th>
+                                <th width="20%">时间</th>
+                                <th width="15%">状态</th>
+                                <th width="20%">进度</th>
+                                <th width="10%">视频</th>
+                                <th width="20%">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="taskList">
+                            <tr><td colspan="6" class="empty-state">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="pagination">
+                    <button class="page-btn" id="prevPage" onclick="changePage(-1)">上一页</button>
+                    <span id="pageInfo">1 / 1</span>
+                    <button class="page-btn" id="nextPage" onclick="changePage(1)">下一页</button>
+                    <button class="page-btn" onclick="loadTasks()">🔄 刷新</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Detail Modal -->
+    <div id="detailModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">任务详情</div>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+    
+    <script>
+        const basePath = "{{ base_path }}";
+        let currentPage = 1;
+        let totalPages = 1;
+        
+        function showTab(tab) {
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            document.getElementById('nav-' + tab).classList.add('active');
+            if (tab === 'tasks') loadTasks();
+        }
+        
+        const statusMap = {
+            'processing': { text: '处理中', class: 'processing' },
+            'completed': { text: '已完成', class: 'completed' },
+            'failed': { text: '失败', class: 'failed' },
+            'cancelled': { text: '已取消', class: 'cancelled' }
+        };
+        
+        async function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                loadTasks();
+            }
+        }
+        
+        async function loadTasks() {
+            try {
+                const resp = await fetch(basePath + '/api/tasks?page=' + currentPage + '&page_size=10');
+                const data = await resp.json();
+                
+                document.getElementById('totalCount').textContent = data.count;
+                document.getElementById('processingCount').textContent = data.processing_count;
+                // Count completed from current page only for now, ideally backend should return total completed
+                const completed = data.tasks.filter(t => t.status === 'completed').length; 
+                document.getElementById('completedCount').textContent = completed; 
+                
+                totalPages = data.total_pages || 1;
+                document.getElementById('pageInfo').textContent = `${data.page} / ${totalPages}`;
+                document.getElementById('prevPage').disabled = currentPage <= 1;
+                document.getElementById('nextPage').disabled = currentPage >= totalPages;
+                
+                const tbody = document.getElementById('taskList');
+                
+                if (data.tasks.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">暂无任务</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = data.tasks.map(task => {
+                    const statusInfo = statusMap[task.status] || { text: task.status, class: '' };
+                    const videoLink = task.video_url 
+                        ? `<a href="${basePath}${task.video_url}" target="_blank" class="btn-sm btn-view" style="text-decoration:none; display:inline-block; min-width:60px; text-align:center;">▶ 播放</a>` 
+                        : '<span style="color:#b2bec3">-</span>';
+                    
+                    const cancelBtn = task.status === 'processing'
+                        ? `<button class="btn-sm btn-cancel" onclick="cancelTask('${task.task_id}')">取消</button>`
+                        : '';
+                    
+                    const createdTime = task.created_at ? new Date(task.created_at).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
+                    
+                    return `
+                        <tr>
+                            <td style="font-family:monospace; color:#636e72">${task.task_id.substring(0, 8)}</td>
+                            <td>${createdTime}</td>
+                            <td><span class="badge ${statusInfo.class}">${statusInfo.text}</span></td>
+                            <td>
+                                <div style="display:flex; align-items:center; gap:8px">
+                                    <div class="progress-track" style="width:60px">
+                                        <div class="progress-fill" style="width: ${task.progress}%"></div>
+                                    </div>
+                                    <span style="font-size:12px">${task.progress}%</span>
+                                </div>
+                            </td>
+                            <td>${videoLink}</td>
+                            <td>
+                                <button class="btn-sm btn-view" onclick="showDetail('${task.task_id}')">详情</button>
+                                ${cancelBtn}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+                
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        async function showDetail(taskId) {
+            try {
+                const resp = await fetch(basePath + '/api/task/' + taskId);
+                const task = await resp.json();
+                
+                if (task.error && !task.task_id) {
+                    alert('获取详情失败');
+                    return;
+                }
+                
+                const statusInfo = statusMap[task.status] || { text: task.status, class: '' };
+                const modalBody = document.getElementById('modalBody');
+                
+                modalBody.innerHTML = `
+                    <div class="detail-item">
+                        <div class="detail-label">任务 ID</div>
+                        <div class="detail-content" style="font-family:monospace">${task.task_id}</div>
+                    </div>
+                    <div style="display:flex; gap:20px">
+                        <div class="detail-item" style="flex:1">
+                            <div class="detail-label">状态</div>
+                            <span class="badge ${statusInfo.class}">${statusInfo.text}</span>
+                        </div>
+                        <div class="detail-item" style="flex:1">
+                            <div class="detail-label">进度</div>
+                            <div class="detail-content">${task.progress}%</div>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">创建时间</div>
+                        <div class="detail-content">${task.created_at ? new Date(task.created_at).toLocaleString() : '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">故事内容</div>
+                        <div class="detail-content" style="max-height:150px; overflow-y:auto; line-height:1.6">${task.story_text || '-'}</div>
+                    </div>
+                    ${task.video_url ? `
+                    <div class="detail-item">
+                        <div class="detail-label">生成视频</div>
+                        <video controls src="${basePath}${task.video_url}"></video>
+                        <div style="margin-top:10px; text-align:right">
+                            <a href="${basePath}${task.video_url}" download class="action-btn" style="padding:8px 20px; font-size:14px; text-decoration:none">⬇ 下载视频</a>
+                        </div>
+                    </div>
+                    ` : ''}
+                    ${task.error ? `
+                    <div class="detail-item">
+                        <div class="detail-label">错误信息</div>
+                        <div class="detail-content" style="background:#ffebee; color:#c62828">${task.error.message}</div>
+                    </div>
+                    ` : ''}
+                `;
+                
+                document.getElementById('detailModal').classList.add('active');
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+        }
+        
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('active');
+        }
+        
+        document.getElementById('detailModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        
+        async function generateVideo() {
+            const story = document.getElementById('story').value;
+            if (!story.trim()) {
+                alert('请输入故事内容');
+                return;
+            }
+            
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ 提交中...</span>';
+            
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('result').innerHTML = '';
+            updateProgress('提交任务中...', 0);
+            
+            try {
+                const resp = await fetch(basePath + '/api/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({story_text: story})
+                });
+                const data = await resp.json();
+                
+                if (data.error) {
+                    showError('错误: ' + data.error.message);
+                    resetBtn();
+                    return;
+                }
+                
+                pollStatus(data.task_id);
+            } catch (e) {
+                showError('网络错误: ' + e.message);
+                resetBtn();
+            }
+        }
+        
+        async function pollStatus(taskId) {
+            while (true) {
+                try {
+                    const resp = await fetch(basePath + '/api/task/' + taskId);
+                    const data = await resp.json();
+                    
+                    if (data.error && !data.task_id) {
+                        showError('错误: ' + data.error.message);
+                        break;
+                    }
+                    
+                    updateProgress(statusMap[data.status]?.text || data.status, data.progress);
+                    
+                    if (data.status === 'completed') {
+                        document.getElementById('result').innerHTML = `
+                            <div style="text-align:center; animation:fadeIn 0.5s">
+                                <h3 style="color:#00b894">🎉 生成成功！</h3>
+                                <video controls src="${basePath}${data.video_url}" style="max-width:100%; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.1)"></video>
+                                <br><br>
+                                <a href="${basePath}${data.video_url}" class="action-btn" download>⬇ 下载视频</a>
+                            </div>
+                        `;
+                        resetBtn();
+                        loadTasks(); // Refresh list
+                        break;
+                    }
+                    if (data.status === 'failed') {
+                        showError('生成失败: ' + (data.error?.message || '未知错误'));
+                        resetBtn();
+                        break;
+                    }
+                    if (data.status === 'cancelled') {
+                        showError('任务已取消');
+                        resetBtn();
+                        break;
+                    }
+                    await new Promise(r => setTimeout(r, 2000));
+                } catch (e) {
+                    showError('网络错误: ' + e.message);
+                    resetBtn();
+                    break;
+                }
+            }
+        }
+        
+        function updateProgress(status, progress) {
+            document.getElementById('status').textContent = status;
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressText').textContent = progress + '%';
+        }
+        
+        function showError(message) {
+            document.getElementById('result').innerHTML = `<div style="padding:15px; background:#ffebee; color:#c62828; border-radius:8px; text-align:center">${message}</div>`;
+        }
+        
+        function resetBtn() {
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = false;
+            btn.innerHTML = '<span>🎬 开始生成视频</span>';
+        }
+        
+        async function cancelTask(taskId) {
+            if (!confirm('确定要取消这个任务吗？')) return;
+            try {
+                const resp = await fetch(basePath + '/api/task/' + taskId, { method: 'DELETE' });
+                const data = await resp.json();
+                if (!data.error) loadTasks();
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+        }
+        
+        loadTasks();
+        setInterval(loadTasks, 10000); // Auto refresh every 10s
+    </script>
+</body>
+</html>

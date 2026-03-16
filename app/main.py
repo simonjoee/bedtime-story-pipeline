@@ -27,7 +27,12 @@ templates = Jinja2Templates(directory="templates")
 @app.get("/")
 async def home(request: Request):
     base_path = os.getenv("BASE_PATH", "")
-    return templates.TemplateResponse("index.html", {"request": request, "base_path": base_path})
+    return templates.TemplateResponse("tasks.html", {"request": request, "base_path": base_path})
+
+@app.get("/tasks")
+async def tasks_page(request: Request):
+    base_path = os.getenv("BASE_PATH", "")
+    return templates.TemplateResponse("tasks.html", {"request": request, "base_path": base_path})
 
 image_service = ImageService()
 tts_service = TTSService()
@@ -37,13 +42,14 @@ class GenerateRequest(BaseModel):
     story_text: str
 
 async def process_task(task_id: str):
-    task = task_manager.get_task(task_id)
+    task = await task_manager.get_task(task_id)
     if not task:
         return
     
     try:
         async with asyncio.timeout(1800):
             task.progress = 10
+            await task_manager.update_task(task)
             
             if task.status == TaskStatus.CANCELLED:
                 return
@@ -63,6 +69,7 @@ async def process_task(task_id: str):
             
             image_paths, audio_paths = await asyncio.gather(image_task, audio_task)
             task.progress = 60
+            await task_manager.update_task(task)
             
             if task.status == TaskStatus.CANCELLED:
                 return
@@ -77,16 +84,20 @@ async def process_task(task_id: str):
             else:
                 task.status = TaskStatus.FAILED
                 task.error = {"code": "VIDEO_SYNTHESIS_ERROR", "message": "视频合成失败"}
+            
+            await task_manager.update_task(task)
     
     except asyncio.TimeoutError:
         task.status = TaskStatus.FAILED
         task.error = {"code": "TASK_TIMEOUT", "message": "任务超时"}
+        await task_manager.update_task(task)
     except Exception as e:
         task.status = TaskStatus.FAILED
         task.error = {"code": "TASK_ERROR", "message": str(e)}
+        await task_manager.update_task(task)
     
     finally:
-        task_manager.complete_task(task_id)
+        await task_manager.complete_task(task_id)
 
 @app.post("/api/generate")
 async def generate_video(request: Request):
@@ -100,7 +111,7 @@ async def generate_video(request: Request):
         )
     
     try:
-        task = task_manager.create_task(story_text)
+        task = await task_manager.create_task(story_text)
     except Exception as e:
         return JSONResponse(
             {"error": {"code": "TASK_QUEUE_FULL", "message": str(e)}},
@@ -111,9 +122,50 @@ async def generate_video(request: Request):
     
     return {"task_id": task.task_id, "status": "processing"}
 
+@app.post("/api/upload-images/{task_id}")
+async def upload_images(task_id: str, request: Request):
+    task = await task_manager.get_task(task_id)
+    if not task:
+        return JSONResponse(
+            {"error": {"code": "TASK_NOT_FOUND", "message": "任务不存在"}},
+            status_code=404
+        )
+    
+    try:
+        form = await request.form()
+        files = form.getlist("images")
+        
+        if not files:
+            return JSONResponse(
+                {"error": {"code": "NO_IMAGES", "message": "没有上传图片"}},
+                status_code=400
+            )
+        
+        task_dir = f"static/tasks/{task_id}"
+        os.makedirs(f"{task_dir}/images", exist_ok=True)
+        
+        image_paths = []
+        for i, file in enumerate(files):
+            content = await file.read()
+            image_path = f"{task_dir}/images/image_{i}.png"
+            with open(image_path, "wb") as f:
+                f.write(content)
+            image_paths.append(image_path)
+        
+        task.image_paths = image_paths
+        await task_manager.update_task(task)
+        
+        return {"status": "ok", "image_count": len(image_paths)}
+    
+    except Exception as e:
+        return JSONResponse(
+            {"error": {"code": "UPLOAD_ERROR", "message": str(e)}},
+            status_code=500
+        )
+
 @app.get("/api/task/{task_id}")
 async def get_task(task_id: str):
-    task = task_manager.get_task(task_id)
+    task = await task_manager.get_task(task_id)
     if not task:
         return JSONResponse(
             {"error": {"code": "TASK_NOT_FOUND", "message": "任务不存在"}},
@@ -123,19 +175,53 @@ async def get_task(task_id: str):
         "task_id": task.task_id,
         "status": task.status.value,
         "progress": task.progress,
+        "story_text": task.story_text,
         "video_url": task.video_url,
-        "error": task.error
+        "error": task.error,
+        "created_at": task.created_at.isoformat() if task.created_at else None
     }
 
 @app.delete("/api/task/{task_id}")
 async def cancel_task(task_id: str):
-    success = task_manager.cancel_task(task_id)
+    success = await task_manager.cancel_task(task_id)
     if not success:
         return JSONResponse(
             {"error": {"code": "TASK_NOT_FOUND", "message": "任务不存在"}},
             status_code=404
         )
     return {"task_id": task_id, "status": "cancelled"}
+
+@app.get("/api/tasks")
+async def list_tasks(page: int = 1, page_size: int = 10):
+    all_tasks = await task_manager.list_tasks()
+    all_tasks.sort(key=lambda t: t.created_at or "", reverse=True)
+    
+    total = len(all_tasks)
+    total_pages = (total + page_size - 1) // page_size
+    
+    start = (page - 1) * page_size
+    end = start + page_size
+    tasks = all_tasks[start:end]
+    
+    return {
+        "tasks": [
+            {
+                "task_id": task.task_id,
+                "status": task.status.value,
+                "progress": task.progress,
+                "story_text": task.story_text,
+                "video_url": task.video_url,
+                "error": task.error,
+                "created_at": task.created_at.isoformat() if task.created_at else None
+            }
+            for task in tasks
+        ],
+        "count": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "processing_count": task_manager._processing_count
+    }
 
 @app.get("/health")
 async def health_check():
@@ -175,6 +261,7 @@ async def cleanup_old_files():
 
 @app.on_event("startup")
 async def startup():
+    await task_manager.init()
     asyncio.create_task(cleanup_old_files())
 
 if __name__ == "__main__":

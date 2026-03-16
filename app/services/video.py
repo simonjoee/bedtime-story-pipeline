@@ -26,7 +26,7 @@ class VideoService:
             logger.error("FFmpeg not available")
             return False
         
-        demo_mode = os.getenv("DEMO_MODE", "true").lower() == "true"
+        demo_mode = os.getenv("DEMO_MODE", "false").lower() == "true"
         
         if demo_mode:
             logger.info("Demo mode: creating placeholder video file")
@@ -39,7 +39,7 @@ class VideoService:
             for i, (img, audio) in enumerate(zip(image_paths, audio_paths)):
                 duration = self._get_duration(audio)
                 segment = f"/tmp/segment_{i}.mp4"
-                self._create_segment(img, segment, duration)
+                self._create_segment(img, audio, segment, duration)
                 concat_list.append(segment)
             
             self._concat_segments(concat_list, output_path)
@@ -63,12 +63,17 @@ class VideoService:
         except Exception:
             return 3.0
     
-    def _create_segment(self, image_path: str, output_path: str, duration: float):
+    def _create_segment(self, image_path: str, audio_path: str, output_path: str, duration: float):
+        scale_filter = "scale=-1:720,pad=1280:720:(ow-iw)/2:(oh-ih)/2"
         subprocess.run([
             "ffmpeg", "-y", "-loop", "1", "-i", image_path,
+            "-i", audio_path,
             "-c:v", "libx264", "-t", str(duration),
-            "-vf", f"scale={self.resolution}",
-            "-pix_fmt", "yuv420p", output_path
+            "-vf", scale_filter,
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-b:a", "128k",
+            "-shortest",
+            output_path
         ], capture_output=True)
     
     def _concat_segments(self, segments: list[str], output_path: str):
@@ -79,7 +84,9 @@ class VideoService:
         
         subprocess.run([
             "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", list_file,
-            "-c", "copy", output_path
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+            output_path
         ], capture_output=True)
         
         os.remove(list_file)

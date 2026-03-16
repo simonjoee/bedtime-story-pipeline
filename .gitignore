@@ -1,1 +1,9 @@
 .worktrees/
+__pycache__/
+*.pyc
+venv/
+data/
+static/tasks/
+static/videos/
+.DS_Store
+*.log
