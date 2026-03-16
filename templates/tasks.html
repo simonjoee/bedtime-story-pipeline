@@ -297,10 +297,19 @@
             <button class="tab-btn active" onclick="showTab('tasks')" id="nav-tasks">📋 历史任务</button>
         </div>
         
-        <div class="content-area">
+            <div class="content-area">
             <!-- Generate Tab -->
             <div id="tab-generate" class="tab-pane">
                 <textarea id="story" placeholder="请输入故事内容... 例如：一只勇敢的小兔子在魔法森林里寻找丢失的星星..."></textarea>
+                
+                <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin-bottom:20px;">
+                    <label style="color:#636e72; font-size:14px;">语音合成：</label>
+                    <select id="ttsProvider" style="padding:8px 16px; border-radius:8px; border:2px solid #dfe6e9; font-size:14px; color:#2d3436;">
+                        <option value="edge">Edge TTS (免费)</option>
+                        <option value="minimax">MiniMax TTS (需要配置)</option>
+                    </select>
+                </div>
+                
                 <div style="text-align: center;">
                     <button class="action-btn" id="generateBtn" onclick="generateVideo()">
                         <span>🎬 开始生成视频</span>
@@ -345,12 +354,11 @@
                                 <th width="12%">状态</th>
                                 <th width="15%">进度</th>
                                 <th width="10%">视频</th>
-                                <th width="10%">YouTube</th>
-                                <th width="26%">操作</th>
+                                <th width="36%">操作</th>
                             </tr>
                         </thead>
                         <tbody id="taskList">
-                            <tr><td colspan="7" class="empty-state">加载中...</td></tr>
+                            <tr><td colspan="6" class="empty-state">加载中...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -411,9 +419,7 @@
                 
                 document.getElementById('totalCount').textContent = data.count;
                 document.getElementById('processingCount').textContent = data.processing_count;
-                // Count completed from current page only for now, ideally backend should return total completed
-                const completed = data.tasks.filter(t => t.status === 'completed').length; 
-                document.getElementById('completedCount').textContent = completed; 
+                document.getElementById('completedCount').textContent = data.completed_count || 0;
                 
                 totalPages = data.total_pages || 1;
                 document.getElementById('pageInfo').textContent = `${data.page} / ${totalPages}`;
@@ -423,7 +429,7 @@
                 const tbody = document.getElementById('taskList');
                 
                 if (data.tasks.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">暂无任务</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">暂无任务</td></tr>';
                     return;
                 }
                 
@@ -433,11 +439,11 @@
                         ? `<a href="${basePath}${task.video_url}" target="_blank" class="btn-sm btn-view" style="text-decoration:none; display:inline-block; min-width:60px; text-align:center;">▶ 播放</a>` 
                         : '<span style="color:#b2bec3">-</span>';
                     
-                    let youtubeBtn = '<span style="color:#b2bec3">-</span>';
+                    let ytBtn = '';
                     if (task.video_url && !task.youtube_url && task.status === 'completed') {
-                        youtubeBtn = `<button class="btn-sm" style="background:#ff0000; color:white" onclick="uploadToYouTube('${task.task_id}')">⬆ 上传</button>`;
+                        ytBtn = `<button class="btn-sm" style="background:#ff0000; color:white; margin-left:4px" onclick="uploadToYouTube('${task.task_id}')">⬆</button>`;
                     } else if (task.youtube_url) {
-                        youtubeBtn = `<a href="${task.youtube_url}" target="_blank" class="btn-sm" style="background:#065fd4; color:white; text-decoration:none">▶ YouTube</a>`;
+                        ytBtn = `<a href="${task.youtube_url}" target="_blank" class="btn-sm" style="background:#065fd4; color:white; text-decoration:none; margin-left:4px">YT</a>`;
                     }
                     
                     const cancelBtn = task.status === 'processing'
@@ -460,10 +466,10 @@
                                 </div>
                             </td>
                             <td>${videoLink}</td>
-                            <td>${youtubeBtn}</td>
                             <td>
                                 <button class="btn-sm btn-view" onclick="showDetail('${task.task_id}')">详情</button>
                                 ${cancelBtn}
+                                ${ytBtn}
                             </td>
                         </tr>
                     `;
@@ -548,6 +554,8 @@
                 return;
             }
             
+            const ttsProvider = document.getElementById('ttsProvider').value;
+            
             const btn = document.getElementById('generateBtn');
             btn.disabled = true;
             btn.innerHTML = '<span>⏳ 提交中...</span>';
@@ -560,7 +568,7 @@
                 const resp = await fetch(basePath + '/api/generate', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({story_text: story})
+                    body: JSON.stringify({story_text: story, tts_provider: ttsProvider})
                 });
                 const data = await resp.json();
                 

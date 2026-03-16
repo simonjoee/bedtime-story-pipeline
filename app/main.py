@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -13,9 +16,13 @@ from app.models import TaskStatus
 from app.task_manager import task_manager
 from app.services.image import ImageService
 from app.services.tts import TTSService
+from app.services.tts_minimax import MiniMaxTTSService
 from app.services.video import VideoService
 from app.services.youtube import youtube_service
 from app.utils.text import split_text
+
+tts_service = TTSService()
+tts_service_minimax = MiniMaxTTSService()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -42,10 +49,16 @@ video_service = VideoService()
 class GenerateRequest(BaseModel):
     story_text: str
 
-async def process_task(task_id: str):
+async def process_task(task_id: str, tts_provider: str = "edge"):
     task = await task_manager.get_task(task_id)
     if not task:
         return
+    
+    # Select TTS service based on provider
+    if tts_provider == "minimax":
+        tts_svc = tts_service_minimax
+    else:
+        tts_svc = tts_service
     
     try:
         async with asyncio.timeout(1800):
@@ -65,7 +78,7 @@ async def process_task(task_id: str):
                 image_service.generate_for_segments(segments, f"{task_dir}/images")
             )
             audio_task = asyncio.create_task(
-                tts_service.generate_for_segments(segments, f"{task_dir}/audio")
+                tts_svc.generate_for_segments(segments, f"{task_dir}/audio")
             )
             
             image_paths, audio_paths = await asyncio.gather(image_task, audio_task)
@@ -104,6 +117,7 @@ async def process_task(task_id: str):
 async def generate_video(request: Request):
     body = await request.json()
     story_text = body.get("story_text", "").strip()
+    tts_provider = body.get("tts_provider", "edge")  # "edge" or "minimax"
     
     if not story_text:
         return JSONResponse(
@@ -119,7 +133,7 @@ async def generate_video(request: Request):
             status_code=429
         )
     
-    asyncio.create_task(process_task(task.task_id))
+    asyncio.create_task(process_task(task.task_id, tts_provider))
     
     return {"task_id": task.task_id, "status": "processing"}
 
@@ -201,6 +215,9 @@ async def list_tasks(page: int = 1, page_size: int = 10):
     total = len(all_tasks)
     total_pages = (total + page_size - 1) // page_size
     
+    completed_tasks = [t for t in all_tasks if t.status == TaskStatus.COMPLETED]
+    completed_count = len(completed_tasks)
+    
     start = (page - 1) * page_size
     end = start + page_size
     tasks = all_tasks[start:end]
@@ -220,6 +237,7 @@ async def list_tasks(page: int = 1, page_size: int = 10):
             for task in tasks
         ],
         "count": total,
+        "completed_count": completed_count,
         "page": page,
         "page_size": page_size,
         "total_pages": total_pages,

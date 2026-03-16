@@ -9,3 +9,4 @@ static/videos/
 *.log
 client_secrets.json
 youtube_token.json
+.env
