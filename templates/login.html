@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 故事生成器</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #a29bfe;
+            --bg: #f8f9fa;
+            --text: #2d3436;
+            --card: #ffffff;
+            --error: #ff7675;
+        }
+        
+        * { box-sizing: border-box; outline: none; }
+        
+        body {
+            font-family: 'Nunito', "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .login-card {
+            background: var(--card);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .logo {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        h1 {
+            color: var(--text);
+            margin: 0 0 8px;
+            font-size: 24px;
+        }
+        
+        .subtitle {
+            color: #636e72;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        input[type="password"], input[type="text"] {
+            width: 100%;
+            padding: 14px 20px;
+            border: 2px solid #dfe6e9;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            text-align: center;
+        }
+        
+        input:focus {
+            border-color: var(--primary);
+        }
+        
+        .login-btn {
+            width: 100%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .login-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(108, 92, 231, 0.3);
+        }
+        
+        .login-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        .error-msg {
+            color: var(--error);
+            margin-top: 15px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .error-msg.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo">✨</div>
+        <h1>故事生成器</h1>
+        <div class="subtitle">请输入密码登录</div>
+        
+        <div class="input-group">
+            <input type="password" id="password" placeholder="请输入密码" onkeypress="handleEnter(event)">
+        </div>
+        
+        <button class="login-btn" id="loginBtn" onclick="doLogin()">登 录</button>
+        
+        <div class="error-msg" id="errorMsg"></div>
+    </div>
+    
+    <script>
+        const basePath = "{{ base_path }}";
+        
+        function handleEnter(e) {
+            if (e.key === 'Enter') {
+                doLogin();
+            }
+        }
+        
+        async function doLogin() {
+            const password = document.getElementById('password').value;
+            if (!password) {
+                showError('请输入密码');
+                return;
+            }
+            
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true;
+            btn.textContent = '登录中...';
+            
+            try {
+                const resp = await fetch(basePath + '/api/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({password: password})
+                });
+                
+                if (resp.ok) {
+                    window.location.href = basePath + '/';
+                } else {
+                    const data = await resp.json();
+                    showError(data.error?.message || '登录失败');
+                }
+            } catch (e) {
+                showError('网络错误: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '登 录';
+            }
+        }
+        
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.classList.add('show');
+        }
+    </script>
+</body>
+</html>

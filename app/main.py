@@ -4,7 +4,7 @@ load_dotenv()
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 import logging
@@ -20,6 +20,8 @@ from app.services.tts_minimax import MiniMaxTTSService
 from app.services.video import VideoService
 from app.services.youtube import youtube_service
 from app.utils.text import split_text
+from app.auth import verify_password, create_session, delete_session, get_session, COOKIE_NAME, cleanup_expired_sessions
+from app.middleware import AuthMiddleware
 
 tts_service = TTSService()
 tts_service_minimax = MiniMaxTTSService()
@@ -28,9 +30,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Bedtime Story Pipeline")
+app.add_middleware(AuthMiddleware)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+
+@app.get("/login")
+async def login_page(request: Request):
+    base_path = os.getenv("BASE_PATH", "")
+    return templates.TemplateResponse("login.html", {"request": request, "base_path": base_path})
 
 @app.get("/")
 async def home(request: Request):
@@ -264,6 +272,44 @@ async def health_check():
         }
     })
 
+class LoginRequest(BaseModel):
+    password: str
+
+@app.post("/api/login")
+async def login(request: LoginRequest):
+    if verify_password(request.password):
+        session_id = create_session()
+        response = JSONResponse({"status": "ok", "message": "登录成功"})
+        response.set_cookie(
+            key=COOKIE_NAME,
+            value=session_id,
+            max_age=7 * 24 * 60 * 60,
+            httponly=True,
+            samesite="lax"
+        )
+        return response
+    return JSONResponse(
+        {"error": {"code": "INVALID_PASSWORD", "message": "密码错误"}},
+        status_code=401
+    )
+
+@app.post("/api/logout")
+async def logout(request: Request):
+    session_id = request.cookies.get(COOKIE_NAME)
+    if session_id:
+        delete_session(session_id)
+    response = JSONResponse({"status": "ok", "message": "已退出登录"})
+    response.delete_cookie(COOKIE_NAME)
+    return response
+
+@app.get("/api/check-auth")
+async def check_auth(request: Request):
+    session_id = request.cookies.get(COOKIE_NAME)
+    session = get_session(session_id) if session_id else None
+    if session:
+        return {"authenticated": True}
+    return JSONResponse({"authenticated": False}, status_code=401)
+
 async def cleanup_old_files():
     while True:
         await asyncio.sleep(3600)
@@ -337,6 +383,12 @@ async def upload_to_youtube(task_id: str):
 async def startup():
     await task_manager.init()
     asyncio.create_task(cleanup_old_files())
+    asyncio.create_task(cleanup_sessions())
+
+async def cleanup_sessions():
+    while True:
+        await asyncio.sleep(3600)
+        cleanup_expired_sessions()
 
 if __name__ == "__main__":
     import uvicorn
