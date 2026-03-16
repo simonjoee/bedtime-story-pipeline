@@ -1,6 +1,6 @@
 from typing import Dict, Optional
 from app.models import Task, TaskStatus
-from app.database import save_task, get_task as db_get_task, get_all_tasks as db_get_all_tasks, init_db
+from app.database import save_task, get_task as db_get_task, get_all_tasks as db_get_all_tasks, init_db, delete_task as db_delete_task
 from datetime import datetime
 import uuid
 import json
@@ -84,6 +84,16 @@ class TaskManager:
     
     async def complete_task(self, task_id: str):
         self._processing_count -= 1
+    
+    async def delete_task(self, task_id: str) -> bool:
+        task = self.tasks.get(task_id)
+        if task:
+            if task.status == TaskStatus.PROCESSING:
+                self._processing_count -= 1
+            del self.tasks[task_id]
+            await db_delete_task(task_id)
+            return True
+        return False
     
     async def list_tasks(self) -> list[Task]:
         return list(self.tasks.values())

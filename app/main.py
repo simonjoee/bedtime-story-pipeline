@@ -207,6 +207,16 @@ async def cancel_task(task_id: str):
         )
     return {"task_id": task_id, "status": "cancelled"}
 
+@app.delete("/api/task/{task_id}/delete")
+async def delete_task(task_id: str):
+    success = await task_manager.delete_task(task_id)
+    if not success:
+        return JSONResponse(
+            {"error": {"code": "TASK_NOT_FOUND", "message": "任务不存在"}},
+            status_code=404
+        )
+    return {"task_id": task_id, "message": "已删除"}
+
 @app.get("/api/tasks")
 async def list_tasks(page: int = 1, page_size: int = 10):
     all_tasks = await task_manager.list_tasks()
