@@ -7,3 +7,5 @@ static/tasks/
 static/videos/
 .DS_Store
 *.log
+client_secrets.json
+youtube_token.json

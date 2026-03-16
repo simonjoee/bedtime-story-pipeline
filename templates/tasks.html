@@ -340,16 +340,17 @@
                     <table>
                         <thead>
                             <tr>
-                                <th width="15%">任务ID</th>
-                                <th width="20%">时间</th>
-                                <th width="15%">状态</th>
-                                <th width="20%">进度</th>
+                                <th width="12%">任务ID</th>
+                                <th width="15%">时间</th>
+                                <th width="12%">状态</th>
+                                <th width="15%">进度</th>
                                 <th width="10%">视频</th>
-                                <th width="20%">操作</th>
+                                <th width="10%">YouTube</th>
+                                <th width="26%">操作</th>
                             </tr>
                         </thead>
                         <tbody id="taskList">
-                            <tr><td colspan="6" class="empty-state">加载中...</td></tr>
+                            <tr><td colspan="7" class="empty-state">加载中...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -422,7 +423,7 @@
                 const tbody = document.getElementById('taskList');
                 
                 if (data.tasks.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">暂无任务</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">暂无任务</td></tr>';
                     return;
                 }
                 
@@ -431,6 +432,13 @@
                     const videoLink = task.video_url 
                         ? `<a href="${basePath}${task.video_url}" target="_blank" class="btn-sm btn-view" style="text-decoration:none; display:inline-block; min-width:60px; text-align:center;">▶ 播放</a>` 
                         : '<span style="color:#b2bec3">-</span>';
+                    
+                    let youtubeBtn = '<span style="color:#b2bec3">-</span>';
+                    if (task.video_url && !task.youtube_url && task.status === 'completed') {
+                        youtubeBtn = `<button class="btn-sm" style="background:#ff0000; color:white" onclick="uploadToYouTube('${task.task_id}')">⬆ 上传</button>`;
+                    } else if (task.youtube_url) {
+                        youtubeBtn = `<a href="${task.youtube_url}" target="_blank" class="btn-sm" style="background:#065fd4; color:white; text-decoration:none">▶ YouTube</a>`;
+                    }
                     
                     const cancelBtn = task.status === 'processing'
                         ? `<button class="btn-sm btn-cancel" onclick="cancelTask('${task.task_id}')">取消</button>`
@@ -452,6 +460,7 @@
                                 </div>
                             </td>
                             <td>${videoLink}</td>
+                            <td>${youtubeBtn}</td>
                             <td>
                                 <button class="btn-sm btn-view" onclick="showDetail('${task.task_id}')">详情</button>
                                 ${cancelBtn}
@@ -627,6 +636,24 @@
             const btn = document.getElementById('generateBtn');
             btn.disabled = false;
             btn.innerHTML = '<span>🎬 开始生成视频</span>';
+        }
+        
+        async function uploadToYouTube(taskId) {
+            if (!confirm('确定要上传到 YouTube 吗？')) return;
+            
+            try {
+                const resp = await fetch(basePath + '/api/upload-youtube/' + taskId, { method: 'POST' });
+                const data = await resp.json();
+                
+                if (data.error) {
+                    alert('上传失败: ' + data.error.message);
+                } else {
+                    alert('上传成功！\n' + data.youtube_url);
+                    loadTasks();
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
         }
         
         async function cancelTask(taskId) {

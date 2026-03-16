@@ -16,6 +16,7 @@ async def init_db():
                 progress INTEGER DEFAULT 0,
                 story_text TEXT,
                 video_url TEXT,
+                youtube_url TEXT,
                 error TEXT,
                 created_at TEXT
             )
@@ -23,12 +24,13 @@ async def init_db():
         await db.commit()
 
 async def save_task(task_id: str, status: str, progress: int, story_text: str,
-                   video_url: Optional[str], error: Optional[dict], created_at: Optional[str]):
+                   video_url: Optional[str], error: Optional[dict], created_at: Optional[str],
+                   youtube_url: Optional[str] = None):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
-            INSERT OR REPLACE INTO tasks (task_id, status, progress, story_text, video_url, error, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (task_id, status, progress, story_text, video_url, json.dumps(error) if error else None, created_at))
+            INSERT OR REPLACE INTO tasks (task_id, status, progress, story_text, video_url, youtube_url, error, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (task_id, status, progress, story_text, video_url, youtube_url, json.dumps(error) if error else None, created_at))
         await db.commit()
 
 async def get_task(task_id: str) -> Optional[dict]:

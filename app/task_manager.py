@@ -27,6 +27,7 @@ class TaskManager:
                 progress=row['progress'],
                 story_text=row['story_text'] or "",
                 video_url=row['video_url'],
+                youtube_url=row.get('youtube_url'),
                 error=json.loads(row['error']) if row['error'] else None,
                 created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None
             )
@@ -50,6 +51,7 @@ class TaskManager:
             progress=task.progress,
             story_text=task.story_text,
             video_url=task.video_url,
+            youtube_url=task.youtube_url,
             error=task.error,
             created_at=now.isoformat()
         )
@@ -66,6 +68,7 @@ class TaskManager:
             progress=task.progress,
             story_text=task.story_text,
             video_url=task.video_url,
+            youtube_url=task.youtube_url,
             error=task.error,
             created_at=task.created_at.isoformat() if task.created_at else None
         )

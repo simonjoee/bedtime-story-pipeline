@@ -15,5 +15,6 @@ class Task(BaseModel):
     progress: int = 0
     story_text: str = ""
     video_url: Optional[str] = None
+    youtube_url: Optional[str] = None
     error: Optional[dict] = None
     created_at: Optional[datetime] = None

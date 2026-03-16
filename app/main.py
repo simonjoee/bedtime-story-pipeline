@@ -14,6 +14,7 @@ from app.task_manager import task_manager
 from app.services.image import ImageService
 from app.services.tts import TTSService
 from app.services.video import VideoService
+from app.services.youtube import youtube_service
 from app.utils.text import split_text
 
 logging.basicConfig(level=logging.INFO)
@@ -177,6 +178,7 @@ async def get_task(task_id: str):
         "progress": task.progress,
         "story_text": task.story_text,
         "video_url": task.video_url,
+        "youtube_url": task.youtube_url,
         "error": task.error,
         "created_at": task.created_at.isoformat() if task.created_at else None
     }
@@ -211,6 +213,7 @@ async def list_tasks(page: int = 1, page_size: int = 10):
                 "progress": task.progress,
                 "story_text": task.story_text,
                 "video_url": task.video_url,
+                "youtube_url": task.youtube_url,
                 "error": task.error,
                 "created_at": task.created_at.isoformat() if task.created_at else None
             }
@@ -258,6 +261,49 @@ async def cleanup_old_files():
                             os.remove(video_path)
         except Exception as e:
             logger.error(f"Cleanup failed: {e}")
+
+@app.post("/api/upload-youtube/{task_id}")
+async def upload_to_youtube(task_id: str):
+    task = await task_manager.get_task(task_id)
+    if not task:
+        return JSONResponse(
+            {"error": {"code": "TASK_NOT_FOUND", "message": "任务不存在"}},
+            status_code=404
+        )
+    
+    if task.status != TaskStatus.COMPLETED or not task.video_url:
+        return JSONResponse(
+            {"error": {"code": "TASK_NOT_COMPLETED", "message": "任务未完成，无法上传"}},
+            status_code=400
+        )
+    
+    if task.youtube_url:
+        return {"youtube_url": task.youtube_url, "message": "视频已上传过"}
+    
+    video_path = f".{task.video_url}"
+    if not os.path.exists(video_path):
+        return JSONResponse(
+            {"error": {"code": "VIDEO_NOT_FOUND", "message": "视频文件不存在"}},
+            status_code=404
+        )
+    
+    try:
+        result = youtube_service.upload_video(
+            video_path=video_path,
+            title=f"睡前故事: {task.story_text[:50]}",
+            description=task.story_text
+        )
+        
+        task.youtube_url = result['video_url']
+        await task_manager.update_task(task)
+        
+        return {"youtube_url": result['video_url'], "message": "上传成功"}
+        
+    except Exception as e:
+        return JSONResponse(
+            {"error": {"code": "UPLOAD_FAILED", "message": str(e)}},
+            status_code=500
+        )
 
 @app.on_event("startup")
 async def startup():
