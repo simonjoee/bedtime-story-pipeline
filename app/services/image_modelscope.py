@@ -5,6 +5,15 @@ import aiohttp
 
 logger = logging.getLogger(__name__)
 
+IMAGE_STYLE_PROMPTS = {
+    "cartoon": "cartoon style, animated, children's book illustration, cute, whimsical",
+    "watercolor": "watercolor painting, soft colors, gentle, pastel colors",
+    "realistic": "realistic, photorealistic, photograph",
+    "oil_painting": "oil painting style, artistic, painterly",
+    "3d": "3D render, Pixar style, CGI, digital art, animated character",
+    "illustration": "illustration, children's book art, whimsical, colorful"
+}
+
 class ModelScopeImageService:
     def __init__(self):
         self.api_key = os.getenv("DASHSCOPE_API_KEY", "")
@@ -13,9 +22,11 @@ class ModelScopeImageService:
         self.size = "1280*720"
         self.timeout = 300
     
-    async def generate_image(self, prompt: str, output_path: str) -> bool:
+    async def generate_image(self, prompt: str, output_path: str, style: str = "cartoon") -> bool:
         try:
-            logger.info(f"Generating image with ModelScope: {prompt[:50]}...")
+            style_prompt = IMAGE_STYLE_PROMPTS.get(style, IMAGE_STYLE_PROMPTS["cartoon"])
+            full_prompt = f"{prompt}, {style_prompt}"
+            logger.info(f"Generating image with ModelScope: {prompt[:50]}... style: {style}")
             
             async with asyncio.timeout(self.timeout):
                 task_id = await self._create_task(prompt)
@@ -106,7 +117,7 @@ class ModelScopeImageService:
                 with open(output_path, "wb") as f:
                     f.write(content)
     
-    async def generate_for_segments(self, segments: list[str], output_dir: str) -> tuple[list[str], list[dict]]:
+    async def generate_for_segments(self, segments: list[str], output_dir: str, style: str = "cartoon") -> tuple[list[str], list[dict]]:
         os.makedirs(output_dir, exist_ok=True)
         
         image_paths = []
@@ -114,7 +125,7 @@ class ModelScopeImageService:
         for i, segment in enumerate(segments):
             output_path = os.path.join(output_dir, f"image_{i}.png")
             try:
-                success = await self.generate_image(segment, output_path)
+                success = await self.generate_image(segment, output_path, style)
                 if success:
                     image_paths.append(output_path)
                 else:

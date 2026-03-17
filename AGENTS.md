@@ -1,67 +1,65 @@
-# AGENTS.md - Bedtime Story Pipeline
+# AGENTS.md - 睡前故事视频生成流水线
 
-## Project Overview
+## 项目概述
 
-This is a FastAPI-based web application that generates bedtime story videos by:
-1. Splitting story text into segments
-2. Generating images for each segment (via ImageService)
-3. Converting text to speech (via TTSService)
-4. Synthesizing images + audio into video (via VideoService)
+基于 FastAPI 的 Web 应用，用于生成睡前故事视频：
+1. 将故事文本分段
+2. 生成图片（ImageService - 支持 HuggingFace、Leonardo、ModelScope）
+3. 文字转语音（TTSService - Azure、MiniMax）
+4. 合成图片+音频为视频（VideoService）
 
-## Commands
-
-### Running the Application
+## 命令
 
 ```bash
+# 安装依赖
 cd bedtime-story-pipeline
 pip install -r requirements.txt
+
+# 运行应用
 python -m app.main
-```
+# 运行在 http://0.0.0.0:8000
 
-The app runs on `http://0.0.0.0:8000`.
-
-### Running Tests
-
-```bash
-# Run all tests
+# 运行所有测试
 pytest
 
-# Run a single test file
+# 运行单个测试文件
 pytest tests/test_image.py
 
-# Run a single test function
+# 运行单个测试函数
 pytest tests/test_image.py::test_image_service_generate
 ```
 
-### Environment Variables
+## 环境变量
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `TTS_API_KEY` | Azure TTS API key | (empty - demo mode) |
-| `TTS_ENDPOINT` | Azure TTS endpoint | `https://eastus.api.cognitive.microsoft.com` |
-| `TTS_VOICE` | TTS voice name | `zh-CN-YunxiNeural` |
-| `IMAGE_API_KEY` | Image generation API key | (empty) |
-| `IMAGE_ENDPOINT` | Image generation endpoint | (empty) |
-| `IMAGE_PROVIDER` | Image provider | `leonardo` |
-| `DEMO_MODE` | Use demo/placeholder mode | `true` |
-| `BASE_PATH` | Base path for URLs | (empty) |
+| 变量 | 描述 | 默认值 |
+|------|------|--------|
+| `ADMIN_PASSWORD` | 登录密码 | (空 - 无需认证) |
+| `SESSION_SECRET` | Session 密钥 | `default-secret-change-me` |
+| `HF_API_KEY` | HuggingFace API 密钥 | (空) |
+| `MINIMAX_ACCESS_TOKEN` | MiniMax TTS token | (空) |
+| `MINIMAX_MODEL` | MiniMax TTS 模型 | `speech-02-turbo` |
+| `MINIMAX_VOICE` | MiniMax 语音 | `male-qn-qingse` |
+| `IMAGE_PROVIDER` | 图片生成服务商 | `huggingface` |
+| `DEMO_MODE` | 使用演示模式 | `false` |
+| `BASE_PATH` | 基础 URL 路径 | (空) |
+| `TTS_API_KEY` | Azure TTS API 密钥 | (空) |
+| `TTS_ENDPOINT` | Azure TTS 端点 | `https://eastus.api.cognitive.microsoft.com` |
+| `TTS_VOICE` | Azure TTS 语音 | `zh-CN-YunxiNeural` |
+| `CLIENT_SECRETS_FILE` | YouTube OAuth 密钥文件 | `client_secrets.json` |
 
-## Code Style Guidelines
+## 代码风格
 
-### General
+### 通用规范
+- 使用 **4 个空格** 缩进（不使用 Tab）
+- 最大行长度：**100 字符**
+- 函数/变量使用 **snake_case**
+- 类名使用 **PascalCase**
+- 常量使用 **UPPER_SNAKE_CASE**
 
-- Use **4 spaces** for indentation (no tabs)
-- Maximum line length: **100 characters**
-- Use **snake_case** for functions and variables
-- Use **PascalCase** for class names
-- Use **UPPER_SNAKE_CASE** for constants
-
-### Imports
-
-Order imports as:
-1. Standard library (`os`, `asyncio`, `logging`)
-2. Third-party (`fastapi`, `aiohttp`, `pydantic`)
-3. Local application (`app.models`, `app.services`)
+### 导入顺序
+1. 标准库 (`os`, `asyncio`, `logging`)
+2. 第三方库 (`fastapi`, `aiohttp`, `pydantic`)
+3. 本地应用 (`app.models`, `app.services`)
 
 ```python
 import os
@@ -75,78 +73,55 @@ from app.models import Task, TaskStatus
 from app.services.tts import TTSService
 ```
 
-### Type Hints
-
-Always use type hints for function parameters and return values:
+### 类型注解
+- 参数和返回值始终使用类型注解
+- 可空类型使用 `Optional[X]`
+- 使用 `list[X]` 而非 `List[X]`（Python 3.9+）
 
 ```python
 async def generate_image(self, prompt: str, output_path: str) -> bool:
     ...
-```
 
-Use `Optional[X]` for nullable types:
-```python
 video_url: Optional[str] = None
 ```
 
-Use `list[str]` instead of `List[str]` (Python 3.9+).
-
-### Error Handling
-
-- Use try/except blocks for operations that may fail
-- Always log errors with `logger.error()`
-- Raise exceptions for retryable failures (handled by `@async_retry`)
-- Return `False` for non-retryable failures
-- Use descriptive error dictionaries for API responses:
+### 错误处理
+- 可能失败的操作使用 try/except
+- 使用 `logger.error()` 记录错误
+- 可重试的失败抛出异常（由 `@async_retry` 处理）
+- 不可重试的失败返回 `False`
+- API 响应使用错误字典：
 
 ```python
 task.error = {"code": "VIDEO_SYNTHESIS_ERROR", "message": "视频合成失败"}
 ```
 
-### Async/Await
+### 异步编程
+- 异步函数使用 `async def`
+- 并发操作使用 `asyncio.gather()`
+- 长任务使用 `asyncio.timeout()`
 
-- Use `async def` for async functions
-- Use `asyncio.gather()` for concurrent operations
-- Use `asyncio.timeout()` for long-running tasks
-- Use `asyncio.create_task()` for fire-and-forget background tasks
-
-### Logging
-
-Use the module-level logger pattern:
-
+### 日志记录
 ```python
 logger = logging.getLogger(__name__)
 ```
 
-Log levels:
-- `logger.debug()` - Detailed debugging info
-- `logger.info()` - Normal operation events
-- `logger.warning()` - Warning conditions
-- `logger.error()` - Errors
-
-### Services Pattern
-
-Follow the existing service pattern:
-- Create service classes in `app/services/`
-- Use `@async_retry` decorator for API calls
-- Read config from environment variables in `__init__`
-- Use snake_case method names
+### 服务模式
+- 在 `app/services/` 创建服务类
+- API 调用使用 `@async_retry` 装饰器
+- 在 `__init__` 中从环境变量读取配置
 
 ```python
 class ImageService:
     def __init__(self):
         self.api_key = os.getenv("IMAGE_API_KEY", "")
-        ...
-    
+
     @async_retry(max_attempts=3, base_delay=2)
     async def generate_image(self, prompt: str, output_path: str) -> bool:
         ...
 ```
 
-### Models
-
-Use Pydantic for data models:
-
+### 数据模型（Pydantic）
 ```python
 from pydantic import BaseModel
 from enum import Enum
@@ -154,60 +129,63 @@ from enum import Enum
 class TaskStatus(str, Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
-    ...
 
 class Task(BaseModel):
     task_id: str
     status: TaskStatus = TaskStatus.PROCESSING
-    ...
 ```
 
-### Testing
+### 测试
+- 测试文件放在 `tests/` 目录
+- 测试文件名格式：`test_*.py`
+- 测试函数名格式：`test_*`
+- 异步测试使用 `pytest-asyncio`
+- 模拟外部 API 调用
 
-- Place tests in `tests/` directory
-- Name test files as `test_*.py`
-- Name test functions as `test_*`
-- Use `pytest-asyncio` for async tests
-- Mock external API calls in tests
-
-### File Structure
+## 文件结构
 
 ```
 bedtime-story-pipeline/
 ├── app/
-│   ├── __init__.py
-│   ├── main.py              # FastAPI app entry point
-│   ├── models.py            # Pydantic models
-│   ├── task_manager.py      # Task management
-│   ├── routers/             # API routers (future)
-│   ├── services/            # External service integrations
+│   ├── main.py              # FastAPI 入口
+│   ├── models.py            # Pydantic 模型
+│   ├── task_manager.py      # 任务管理
+│   ├── auth.py              # 认证
+│   ├── middleware.py        # 中间件
+│   ├── database.py          # 数据库
+│   ├── services/            # 外部服务
 │   │   ├── image.py
+│   │   ├── image_leonardo.py
+│   │   ├── image_modelscope.py
 │   │   ├── tts.py
-│   │   └── video.py
-│   └── utils/               # Utility functions
+│   │   ├── tts_minimax.py
+│   │   ├── video.py
+│   │   └── youtube.py
+│   └── utils/
 │       ├── text.py
 │       └── retry.py
-├── static/                  # Static files (generated videos, etc.)
-├── templates/               # Jinja2 templates
-├── tests/                  # Test files
+├── templates/               # Jinja2 模板
+├── tests/                   # 测试文件
+├── static/                  # 静态文件
+├── .env                     # 环境配置
 ├── requirements.txt
 └── pytest.ini
 ```
 
-### Naming Conventions
+## 命名规范
 
-| Type | Convention | Example |
-|------|------------|---------|
-| Files | snake_case | `task_manager.py` |
-| Classes | PascalCase | `TaskManager` |
-| Functions | snake_case | `generate_image` |
-| Variables | snake_case | `task_id`, `audio_paths` |
-| Constants | UPPER_SNAKE_CASE | `MAX_CONCURRENT` |
-| Enum values | UPPER_SNAKE_CASE | `TaskStatus.PROCESSING` |
+| 类型 | 规范 | 示例 |
+|------|------|------|
+| 文件名 | snake_case | `task_manager.py` |
+| 类名 | PascalCase | `TaskManager` |
+| 函数 | snake_case | `generate_image` |
+| 变量 | snake_case | `task_id` |
+| 常量 | UPPER_SNAKE_CASE | `MAX_CONCURRENT` |
+| 枚举值 | UPPER_SNAKE_CASE | `TaskStatus.PROCESSING` |
 
-### Retries
+## 重试机制
 
-Use the `@async_retry` decorator for any external API calls:
+外部 API 调用使用 `@async_retry` 装饰器：
 
 ```python
 from app.utils.retry import async_retry

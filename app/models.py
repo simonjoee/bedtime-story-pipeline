@@ -19,3 +19,6 @@ class Task(BaseModel):
     error: Optional[dict] = None
     steps: Dict[str, dict] = {}
     created_at: Optional[datetime] = None
+    tts_provider: Optional[str] = "edge"
+    image_provider: Optional[str] = "huggingface"
+    image_style: Optional[str] = "cartoon"

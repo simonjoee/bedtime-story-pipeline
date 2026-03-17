@@ -219,6 +219,18 @@
         .btn-delete { background: #ffebee; color: var(--error); }
         .btn-delete:hover { background: var(--error); color: white; }
         
+        .tool-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            margin-right: 8px;
+            font-weight: 500;
+        }
+        .tts-badge { background: #e3f2fd; color: #1565c0; }
+        .img-badge { background: #fce4ec; color: #c2185b; }
+        .style-badge { background: #fff3e0; color: #e65100; }
+        
         .empty-state {
             padding: 60px;
             text-align: center;
@@ -309,7 +321,7 @@
                 <textarea id="story" placeholder="请输入故事内容... 例如：一只勇敢的小兔子在魔法森林里寻找丢失的星星..."></textarea>
                 
                 <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin-bottom:20px;">
-                    <label style="color:#636e72; font-size:14px;">语音合成：</label>
+                    <label style="color:#636e72; font-size:14px; width:70px; text-align:right;">语音合成：</label>
                     <select id="ttsProvider" style="padding:8px 16px; border-radius:8px; border:2px solid #dfe6e9; font-size:14px; color:#2d3436;">
                         <option value="edge">Edge TTS (免费)</option>
                         <option value="minimax">MiniMax TTS</option>
@@ -317,11 +329,20 @@
                 </div>
                 
                 <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin-bottom:20px;">
-                    <label style="color:#636e72; font-size:14px;">图像生成：</label>
+                    <label style="color:#636e72; font-size:14px; width:70px; text-align:right;">图像生成：</label>
                     <select id="imageProvider" style="padding:8px 16px; border-radius:8px; border:2px solid #dfe6e9; font-size:14px; color:#2d3436;">
                         <option value="huggingface">HuggingFace (免费)</option>
                         <option value="modelscope">魔搭社区/通义万相</option>
                         <option value="leonardo">Leonardo AI</option>
+                    </select>
+                    <label style="color:#636e72; font-size:14px; width:70px; text-align:right;">图片风格：</label>
+                    <select id="imageStyle" style="padding:8px 16px; border-radius:8px; border:2px solid #dfe6e9; font-size:14px; color:#2d3436;">
+                        <option value="cartoon">卡通/动漫</option>
+                        <option value="3d">3D动画</option>
+                        <option value="illustration">插画</option>
+                        <option value="watercolor">水彩画</option>
+                        <option value="oil_painting">油画</option>
+                        <option value="realistic">写实</option>
                     </select>
                 </div>
                 
@@ -365,11 +386,10 @@
                         <thead>
                             <tr>
                                 <th width="12%">任务ID</th>
-                                <th width="15%">时间</th>
+                                <th width="18%">时间</th>
                                 <th width="12%">状态</th>
-                                <th width="15%">进度</th>
-                                <th width="10%">视频</th>
-                                <th width="36%">操作</th>
+                                <th width="20%">进度</th>
+                                <th width="38%">操作</th>
                             </tr>
                         </thead>
                         <tbody id="taskList">
@@ -523,15 +543,12 @@
                 
                 tbody.innerHTML = data.tasks.map(task => {
                     const statusInfo = statusMap[task.status] || { text: task.status, class: '' };
-                    const videoLink = task.video_url 
-                        ? `<a href="${basePath}${task.video_url}" target="_blank" class="btn-sm btn-view" style="text-decoration:none; display:inline-block; min-width:60px; text-align:center;">▶ 播放</a>` 
-                        : '<span style="color:#b2bec3">-</span>';
                     
                     let ytBtn = '';
                     if (task.video_url && !task.youtube_url && task.status === 'completed') {
-                        ytBtn = `<button class="btn-sm" style="background:#ff0000; color:white; margin-left:4px" onclick="uploadToYouTube('${task.task_id}')">⬆</button>`;
+                        ytBtn = `<button class="btn-sm btn-view" style="margin-left:4px" onclick="uploadToYouTube('${task.task_id}')">上传YT</button>`;
                     } else if (task.youtube_url) {
-                        ytBtn = `<a href="${task.youtube_url}" target="_blank" class="btn-sm" style="background:#065fd4; color:white; text-decoration:none; margin-left:4px">YT</a>`;
+                        ytBtn = `<a href="${task.youtube_url}" target="_blank" class="btn-sm btn-view" style="text-decoration:none; margin-left:4px">YT</a>`;
                     }
                     
                     const cancelBtn = task.status === 'processing'
@@ -553,7 +570,6 @@
                                     <span style="font-size:12px">${task.progress}%</span>
                                 </div>
                             </td>
-                            <td>${videoLink}</td>
                             <td onclick="event.stopPropagation()">
                                 <button class="btn-sm btn-view" onclick="showDetail('${task.task_id}')">详情</button>
                                 ${cancelBtn}
@@ -600,6 +616,13 @@
                     <div class="detail-item">
                         <div class="detail-label">创建时间</div>
                         <div class="detail-content">${task.created_at ? new Date(task.created_at).toLocaleString() : '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">工具配置</div>
+                        <div class="detail-content">
+                            <span class="tool-badge tts-badge">🔊 ${task.tts_provider === 'minimax' ? 'MiniMax' : 'Edge'} TTS</span>
+                            <span class="tool-badge img-badge">🖼️ ${task.image_provider === 'huggingface' ? 'HuggingFace' : task.image_provider === 'leonardo' ? 'Leonardo' : 'ModelScope'} | ${task.image_style === 'cartoon' ? '卡通' : task.image_style === '3d' ? '3D动画' : task.image_style === 'illustration' ? '插画' : task.image_style === 'watercolor' ? '水彩' : task.image_style === 'oil_painting' ? '油画' : '写实'}</span>
+                        </div>
                     </div>
                     ${task.steps ? `
                     <div class="detail-item">
@@ -659,6 +682,7 @@
             
             const ttsProvider = document.getElementById('ttsProvider').value;
             const imageProvider = document.getElementById('imageProvider').value;
+            const imageStyle = document.getElementById('imageStyle').value;
             
             const btn = document.getElementById('generateBtn');
             btn.disabled = true;
@@ -675,7 +699,8 @@
                     body: JSON.stringify({
                         story_text: story, 
                         tts_provider: ttsProvider,
-                        image_provider: imageProvider
+                        image_provider: imageProvider,
+                        image_style: imageStyle
                     })
                 });
                 const data = await resp.json();

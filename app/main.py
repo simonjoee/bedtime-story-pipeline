@@ -61,7 +61,7 @@ video_service = VideoService()
 class GenerateRequest(BaseModel):
     story_text: str
 
-async def process_task(task_id: str, tts_provider: str = "edge", image_provider: str = "huggingface"):
+async def process_task(task_id: str, tts_provider: str = "edge", image_provider: str = "huggingface", image_style: str = "cartoon"):
     task = await task_manager.get_task(task_id)
     if not task:
         return
@@ -114,7 +114,7 @@ async def process_task(task_id: str, tts_provider: str = "edge", image_provider:
             await task_manager.update_task(task)
             
             image_task = asyncio.create_task(
-                img_svc.generate_for_segments(segments, f"{task_dir}/images")
+                img_svc.generate_for_segments(segments, f"{task_dir}/images", image_style)
             )
             audio_task = asyncio.create_task(
                 tts_svc.generate_for_segments(segments, f"{task_dir}/audio")
@@ -179,6 +179,7 @@ async def generate_video(request: Request):
     story_text = body.get("story_text", "").strip()
     tts_provider = body.get("tts_provider", "edge")  # "edge" or "minimax"
     image_provider = body.get("image_provider", "huggingface")  # "huggingface" or "leonardo"
+    image_style = body.get("image_style", "cartoon")  # cartoon, watercolor, realistic, oil_painting, 3d, illustration
     
     if not story_text:
         return JSONResponse(
@@ -187,14 +188,14 @@ async def generate_video(request: Request):
         )
     
     try:
-        task = await task_manager.create_task(story_text)
+        task = await task_manager.create_task(story_text, tts_provider, image_provider, image_style)
     except Exception as e:
         return JSONResponse(
             {"error": {"code": "TASK_QUEUE_FULL", "message": str(e)}},
             status_code=429
         )
     
-    asyncio.create_task(process_task(task.task_id, tts_provider, image_provider))
+    asyncio.create_task(process_task(task.task_id, tts_provider, image_provider, image_style))
     
     return {"task_id": task.task_id, "status": "processing"}
 
@@ -305,7 +306,10 @@ async def list_tasks(page: int = 1, page_size: int = 10):
                 "youtube_url": task.youtube_url,
                 "error": task.error,
                 "steps": task.steps,
-                "created_at": task.created_at.isoformat() if task.created_at else None
+                "created_at": task.created_at.isoformat() if task.created_at else None,
+                "tts_provider": task.tts_provider,
+                "image_provider": task.image_provider,
+                "image_style": task.image_style
             }
             for task in tasks
         ],
