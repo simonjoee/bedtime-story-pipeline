@@ -1,4 +1,4 @@
-from app.services.tts import TTSService
+from app.services.tts_edge import TTSService
 
 def test_tts_service_init():
     service = TTSService()

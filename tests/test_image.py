@@ -1,4 +1,4 @@
-from app.services.image import ImageService
+from app.services.image_huggingface import ImageService
 
 def test_image_service_init():
     service = ImageService()

@@ -70,7 +70,7 @@ import aiohttp
 from fastapi import FastAPI
 
 from app.models import Task, TaskStatus
-from app.services.tts import TTSService
+from app.services.tts_edge import TTSService
 ```
 
 ### 类型注解

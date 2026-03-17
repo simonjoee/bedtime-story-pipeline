@@ -14,10 +14,10 @@ import shutil
 
 from app.models import TaskStatus
 from app.task_manager import task_manager
-from app.services.image import ImageService
+from app.services.image_huggingface import ImageService
 from app.services.image_leonardo import LeonardoImageService
 from app.services.image_modelscope import ModelScopeImageService
-from app.services.tts import TTSService
+from app.services.tts_edge import TTSService
 from app.services.tts_minimax import MiniMaxTTSService
 from app.services.video import VideoService
 from app.services.youtube import youtube_service
