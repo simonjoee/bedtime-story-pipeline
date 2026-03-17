@@ -2,7 +2,7 @@ import aiosqlite
 import os
 import json
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict
 
 DB_PATH = "data/tasks.db"
 
@@ -18,19 +18,27 @@ async def init_db():
                 video_url TEXT,
                 youtube_url TEXT,
                 error TEXT,
+                steps TEXT,
                 created_at TEXT
             )
         """)
+        try:
+            await db.execute("ALTER TABLE tasks ADD COLUMN steps TEXT")
+        except:
+            pass
         await db.commit()
 
 async def save_task(task_id: str, status: str, progress: int, story_text: str,
                    video_url: Optional[str], error: Optional[dict], created_at: Optional[str],
-                   youtube_url: Optional[str] = None):
+                   youtube_url: Optional[str] = None, steps: Optional[Dict[str, dict]] = None):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
-            INSERT OR REPLACE INTO tasks (task_id, status, progress, story_text, video_url, youtube_url, error, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (task_id, status, progress, story_text, video_url, youtube_url, json.dumps(error) if error else None, created_at))
+            INSERT OR REPLACE INTO tasks (task_id, status, progress, story_text, video_url, youtube_url, error, steps, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (task_id, status, progress, story_text, video_url, youtube_url, 
+              json.dumps(error) if error else None,
+              json.dumps(steps) if steps else None,
+              created_at))
         await db.commit()
 
 async def get_task(task_id: str) -> Optional[dict]:

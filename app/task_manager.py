@@ -28,7 +28,8 @@ class TaskManager:
                 story_text=row['story_text'] or "",
                 video_url=row['video_url'],
                 youtube_url=row.get('youtube_url'),
-                error=json.loads(row['error']) if row['error'] else None,
+                error=json.loads(row['error']) if row.get('error') else None,
+                steps=json.loads(row['steps']) if row.get('steps') else {},
                 created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None
             )
             self.tasks[task.task_id] = task
@@ -53,6 +54,7 @@ class TaskManager:
             video_url=task.video_url,
             youtube_url=task.youtube_url,
             error=task.error,
+            steps=task.steps,
             created_at=now.isoformat()
         )
         return task
@@ -70,6 +72,7 @@ class TaskManager:
             video_url=task.video_url,
             youtube_url=task.youtube_url,
             error=task.error,
+            steps=task.steps,
             created_at=task.created_at.isoformat() if task.created_at else None
         )
     

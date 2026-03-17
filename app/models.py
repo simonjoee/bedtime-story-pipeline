@@ -1,6 +1,6 @@
 from enum import Enum
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Dict
 from datetime import datetime
 
 class TaskStatus(str, Enum):
@@ -17,4 +17,5 @@ class Task(BaseModel):
     video_url: Optional[str] = None
     youtube_url: Optional[str] = None
     error: Optional[dict] = None
+    steps: Dict[str, dict] = {}
     created_at: Optional[datetime] = None

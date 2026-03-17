@@ -33,8 +33,9 @@ class ImageService:
             logger.error(f"Image generation failed: {e}")
             raise
     
-    async def generate_for_segments(self, segments: list[str], output_dir: str) -> list[str]:
+    async def generate_for_segments(self, segments: list[str], output_dir: str) -> tuple[list[str], list[dict]]:
         image_paths = []
+        errors = []
         for i, segment in enumerate(segments):
             output_path = os.path.join(output_dir, f"image_{i}.png")
             try:
@@ -43,6 +44,8 @@ class ImageService:
                     image_paths.append(output_path)
                 else:
                     logger.warning(f"Failed to generate image for segment {i}")
+                    errors.append({"segment": i, "error": "生成失败"})
             except Exception as e:
                 logger.error(f"Error generating image for segment {i}: {e}")
-        return image_paths
+                errors.append({"segment": i, "error": str(e)})
+        return image_paths, errors

@@ -1,6 +1,7 @@
 import asyncio
 import os
 import logging
+import subprocess
 import edge_tts
 
 from app.utils.retry import async_retry
@@ -26,6 +27,18 @@ class TTSService:
         except Exception as e:
             logger.error(f"TTS failed: {e}")
             raise
+    
+    def get_audio_duration(self, audio_path: str) -> float:
+        try:
+            result = subprocess.run(
+                ["ffprobe", "-i", audio_path, "-show_entries", "format=duration", 
+                 "-of", "default=noprint_wrappers=1:nokey=1"],
+                capture_output=True, text=True, check=True, timeout=10
+            )
+            return float(result.stdout.strip())
+        except Exception as e:
+            logger.warning(f"Failed to get audio duration: {e}")
+            return 3.0
     
     async def generate_for_segments(self, segments: list[str], output_dir: str) -> list[str]:
         audio_paths = []

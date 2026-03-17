@@ -145,7 +145,8 @@
         .table-container {
             border: 1px solid #edf2f7;
             border-radius: 16px;
-            overflow: hidden;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
         
         table { width: 100%; border-collapse: collapse; }
@@ -263,10 +264,12 @@
             background: white;
             width: 90%;
             max-width: 600px;
+            max-height: 90vh;
             border-radius: 20px;
             padding: 30px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
             animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow-y: auto;
         }
         
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -310,6 +313,15 @@
                     <select id="ttsProvider" style="padding:8px 16px; border-radius:8px; border:2px solid #dfe6e9; font-size:14px; color:#2d3436;">
                         <option value="edge">Edge TTS (免费)</option>
                         <option value="minimax">MiniMax TTS</option>
+                    </select>
+                </div>
+                
+                <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin-bottom:20px;">
+                    <label style="color:#636e72; font-size:14px;">图像生成：</label>
+                    <select id="imageProvider" style="padding:8px 16px; border-radius:8px; border:2px solid #dfe6e9; font-size:14px; color:#2d3436;">
+                        <option value="huggingface">HuggingFace (免费)</option>
+                        <option value="modelscope">魔搭社区/通义万相</option>
+                        <option value="leonardo">Leonardo AI</option>
                     </select>
                 </div>
                 
@@ -381,7 +393,10 @@
         <div class="modal-card">
             <div class="modal-header">
                 <div class="modal-title">任务详情</div>
-                <button class="close-modal" onclick="closeModal()">&times;</button>
+                <div style="display:flex; gap:8px">
+                    <button class="close-modal" onclick="refreshDetail()" title="刷新" style="background:none; border:none; font-size:20px; cursor:pointer; color:#636e72">↻</button>
+                    <button class="close-modal" onclick="closeModal()">&times;</button>
+                </div>
             </div>
             <div id="modalBody"></div>
         </div>
@@ -410,6 +425,7 @@
         const basePath = "{{ base_path }}";
         let currentPage = 1;
         let totalPages = 1;
+        let currentDetailTaskId = null;
         
         async function checkAuth() {
             try {
@@ -445,6 +461,36 @@
             'failed': { text: '失败', class: 'failed' },
             'cancelled': { text: '已取消', class: 'cancelled' }
         };
+        
+        const stepNames = {
+            'split_text': '文本分段',
+            'tts': 'TTS生成',
+            'image': '图像生成',
+            'video': '视频合成'
+        };
+        
+        function renderSteps(steps) {
+            if (!steps || Object.keys(steps).length === 0) {
+                return '<div style="color:#999">暂无步骤信息</div>';
+            }
+            let html = '<div style="display:flex; flex-direction:column; gap:8px">';
+            for (const [key, step] of Object.entries(steps)) {
+                const name = stepNames[key] || key;
+                const statusIcon = step.status === 'completed' ? '✓' : 
+                                   step.status === 'processing' ? '⏳' : 
+                                   step.status === 'failed' ? '✗' : '○';
+                const statusClass = step.status === 'completed' ? '#4caf50' : 
+                                   step.status === 'processing' ? '#ff9800' : 
+                                   step.status === 'failed' ? '#f44336' : '#9e9e9e';
+                html += `<div style="display:flex; align-items:center; gap:8px; padding:4px 0">
+                    <span style="color:${statusClass}; font-size:16px">${statusIcon}</span>
+                    <span style="flex:1">${name}</span>
+                    <span style="color:#666; font-size:12px">${step.message || step.status}</span>
+                </div>`;
+            }
+            html += '</div>';
+            return html;
+        }
         
         async function changePage(delta) {
             const newPage = currentPage + delta;
@@ -495,10 +541,10 @@
                     const createdTime = task.created_at ? new Date(task.created_at).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
                     
                     return `
-                        <tr>
+                        <tr onclick="showDetail('${task.task_id}')" style="cursor:pointer">
                             <td style="font-family:monospace; color:#636e72">${task.task_id.substring(0, 8)}</td>
                             <td>${createdTime}</td>
-                            <td><span class="badge ${statusInfo.class}">${statusInfo.text}</span></td>
+                            <td><span class="badge ${statusInfo.class}" title="${task.error?.message || ''}">${statusInfo.text}</span></td>
                             <td>
                                 <div style="display:flex; align-items:center; gap:8px">
                                     <div class="progress-track" style="width:60px">
@@ -508,7 +554,7 @@
                                 </div>
                             </td>
                             <td>${videoLink}</td>
-                            <td>
+                            <td onclick="event.stopPropagation()">
                                 <button class="btn-sm btn-view" onclick="showDetail('${task.task_id}')">详情</button>
                                 ${cancelBtn}
                                 ${ytBtn}
@@ -523,6 +569,7 @@
         }
         
         async function showDetail(taskId) {
+            currentDetailTaskId = taskId;
             try {
                 const resp = await fetch(basePath + '/api/task/' + taskId);
                 const task = await resp.json();
@@ -554,6 +601,14 @@
                         <div class="detail-label">创建时间</div>
                         <div class="detail-content">${task.created_at ? new Date(task.created_at).toLocaleString() : '-'}</div>
                     </div>
+                    ${task.steps ? `
+                    <div class="detail-item">
+                        <div class="detail-label">处理步骤</div>
+                        <div class="detail-content">
+                            ${renderSteps(task.steps)}
+                        </div>
+                    </div>
+                    ` : ''}
                     <div class="detail-item">
                         <div class="detail-label">故事内容</div>
                         <div class="detail-content" style="max-height:150px; overflow-y:auto; line-height:1.6">${task.story_text || '-'}</div>
@@ -585,6 +640,12 @@
             document.getElementById('detailModal').classList.remove('active');
         }
         
+        function refreshDetail() {
+            if (currentDetailTaskId) {
+                showDetail(currentDetailTaskId);
+            }
+        }
+        
         document.getElementById('detailModal').addEventListener('click', function(e) {
             if (e.target === this) closeModal();
         });
@@ -597,6 +658,7 @@
             }
             
             const ttsProvider = document.getElementById('ttsProvider').value;
+            const imageProvider = document.getElementById('imageProvider').value;
             
             const btn = document.getElementById('generateBtn');
             btn.disabled = true;
@@ -610,7 +672,11 @@
                 const resp = await fetch(basePath + '/api/generate', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({story_text: story, tts_provider: ttsProvider})
+                    body: JSON.stringify({
+                        story_text: story, 
+                        tts_provider: ttsProvider,
+                        image_provider: imageProvider
+                    })
                 });
                 const data = await resp.json();
                 
@@ -620,7 +686,8 @@
                     return;
                 }
                 
-                pollStatus(data.task_id);
+                // 跳转到任务列表
+                window.location.href = basePath + '/tasks';
             } catch (e) {
                 showError('网络错误: ' + e.message);
                 resetBtn();
