@@ -22,7 +22,9 @@ async def init_db():
                 created_at TEXT,
                 tts_provider TEXT DEFAULT 'edge',
                 image_provider TEXT DEFAULT 'huggingface',
-                image_style TEXT DEFAULT 'cartoon'
+                image_style TEXT DEFAULT 'cartoon',
+                polish INTEGER DEFAULT 0,
+                narrator TEXT DEFAULT 'grandma'
             )
         """)
         try:
@@ -41,21 +43,29 @@ async def init_db():
             await db.execute("ALTER TABLE tasks ADD COLUMN image_style TEXT DEFAULT 'cartoon'")
         except:
             pass
+        try:
+            await db.execute("ALTER TABLE tasks ADD COLUMN polish INTEGER DEFAULT 0")
+        except:
+            pass
+        try:
+            await db.execute("ALTER TABLE tasks ADD COLUMN narrator TEXT DEFAULT 'grandma'")
+        except:
+            pass
         await db.commit()
 
 async def save_task(task_id: str, status: str, progress: int, story_text: str,
                    video_url: Optional[str], error: Optional[dict], created_at: Optional[str],
                    youtube_url: Optional[str] = None, steps: Optional[Dict[str, dict]] = None,
                    tts_provider: Optional[str] = "edge", image_provider: Optional[str] = "huggingface",
-                   image_style: Optional[str] = "cartoon"):
+                   image_style: Optional[str] = "cartoon", polish: bool = False, narrator: str = "grandma"):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
-            INSERT OR REPLACE INTO tasks (task_id, status, progress, story_text, video_url, youtube_url, error, steps, created_at, tts_provider, image_provider, image_style)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO tasks (task_id, status, progress, story_text, video_url, youtube_url, error, steps, created_at, tts_provider, image_provider, image_style, polish, narrator)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (task_id, status, progress, story_text, video_url, youtube_url, 
               json.dumps(error) if error else None,
               json.dumps(steps) if steps else None,
-              created_at, tts_provider, image_provider, image_style))
+              created_at, tts_provider, image_provider, image_style, 1 if polish else 0, narrator))
         await db.commit()
 
 async def get_task(task_id: str) -> Optional[dict]:

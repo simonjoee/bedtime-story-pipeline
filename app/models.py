@@ -22,3 +22,5 @@ class Task(BaseModel):
     tts_provider: Optional[str] = "edge"
     image_provider: Optional[str] = "huggingface"
     image_style: Optional[str] = "cartoon"
+    polish: bool = False
+    narrator: str = "grandma"

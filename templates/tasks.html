@@ -301,6 +301,36 @@
             .app-container { border-radius: 0; min-height: 100vh; }
             body { padding: 0; }
         }
+        
+        @media (max-width: 480px) {
+            body { padding: 12px 8px; }
+            .app-container { border-radius: 12px; margin: 0; width: 100%; }
+            h1 { font-size: 22px; }
+            .subtitle { font-size: 14px; }
+            .tab-btn { padding: 10px 12px; font-size: 13px; flex: 1; text-align: center; }
+            textarea { font-size: 14px; padding: 12px; }
+            select { font-size: 13px; padding: 10px; width: 100%; }
+            .select-group { flex-direction: column; }
+            .select-group > div { max-width: 100%; }
+            .action-btn { width: 100%; padding: 14px; font-size: 15px; }
+            .detail-label { font-size: 12px; }
+            .detail-content { font-size: 13px; }
+            .modal-card { padding: 16px; margin: 8px; width: calc(100% - 16px); }
+            .modal-header { margin-bottom: 16px; }
+            header { padding: 20px 16px; }
+            .stats-grid { gap: 12px; }
+            .stats-card { padding: 16px; }
+        }
+        
+        @media (min-width: 1200px) {
+            .app-container { max-width: 1100px; }
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+            textarea { min-height: 180px; }
+        }
+        
+        @media (min-width: 1600px) {
+            .app-container { max-width: 1300px; }
+        }
     </style>
 </head>
 <body>
@@ -320,30 +350,49 @@
             <div id="tab-generate" class="tab-pane">
                 <textarea id="story" placeholder="请输入故事内容... 例如：一只勇敢的小兔子在魔法森林里寻找丢失的星星..."></textarea>
                 
-                <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin-bottom:20px;">
-                    <label style="color:#636e72; font-size:14px; width:70px; text-align:right;">语音合成：</label>
-                    <select id="ttsProvider" style="padding:8px 16px; border-radius:8px; border:2px solid #dfe6e9; font-size:14px; color:#2d3436;">
-                        <option value="edge">Edge TTS (免费)</option>
-                        <option value="minimax">MiniMax TTS</option>
-                    </select>
+                <div class="select-group" style="display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-bottom:20px;">
+                    <div style="min-width:180px; flex:1; max-width:250px;">
+                        <select id="ttsProvider" style="width:100%; padding:10px 14px; border-radius:8px; border:2px solid #dfe6e9; font-size:14px; color:#2d3436;">
+                            <option value="edge">Edge TTS (免费)</option>
+                            <option value="minimax">MiniMax TTS</option>
+                        </select>
+                    </div>
+                    <div style="min-width:180px; flex:1; max-width:250px;">
+                        <select id="imageProvider" style="width:100%; padding:10px 14px; border-radius:8px; border:2px solid #dfe6e9; font-size:14px; color:#2d3436;">
+                            <option value="huggingface">HuggingFace (免费)</option>
+                            <option value="modelscope">魔搭社区/通义万相</option>
+                            <option value="leonardo">Leonardo AI</option>
+                        </select>
+                    </div>
+                    <div style="min-width:180px; flex:1; max-width:250px;">
+                        <select id="imageStyle" style="width:100%; padding:10px 14px; border-radius:8px; border:2px solid #dfe6e9; font-size:14px; color:#2d3436;">
+                            <option value="cartoon">卡通/动漫</option>
+                            <option value="3d">3D动画</option>
+                            <option value="illustration">插画</option>
+                            <option value="watercolor">水彩画</option>
+                            <option value="oil_painting">油画</option>
+                            <option value="realistic">写实</option>
+                        </select>
+                    </div>
                 </div>
                 
-                <div style="display:flex; justify-content:center; align-items:center; gap:15px; margin-bottom:20px;">
-                    <label style="color:#636e72; font-size:14px; width:70px; text-align:right;">图像生成：</label>
-                    <select id="imageProvider" style="padding:8px 16px; border-radius:8px; border:2px solid #dfe6e9; font-size:14px; color:#2d3436;">
-                        <option value="huggingface">HuggingFace (免费)</option>
-                        <option value="modelscope">魔搭社区/通义万相</option>
-                        <option value="leonardo">Leonardo AI</option>
-                    </select>
-                    <label style="color:#636e72; font-size:14px; width:70px; text-align:right;">图片风格：</label>
-                    <select id="imageStyle" style="padding:8px 16px; border-radius:8px; border:2px solid #dfe6e9; font-size:14px; color:#2d3436;">
-                        <option value="cartoon">卡通/动漫</option>
-                        <option value="3d">3D动画</option>
-                        <option value="illustration">插画</option>
-                        <option value="watercolor">水彩画</option>
-                        <option value="oil_painting">油画</option>
-                        <option value="realistic">写实</option>
-                    </select>
+                <div class="select-group" style="display:flex; flex-wrap:wrap; justify-content:center; gap:12px; margin-bottom:20px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <label style="display:flex; align-items:center; cursor:pointer; white-space:nowrap;">
+                            <input type="checkbox" id="polishToggle" style="width:18px; height:18px; margin-right:6px;">
+                            <span style="font-size:14px;">润色故事（使语言更口语化）</span>
+                        </label>
+                    </div>
+                    <div style="min-width:150px; flex:1; max-width:200px;">
+                        <select id="narrator" style="width:100%; padding:10px 14px; border-radius:8px; border:2px solid #dfe6e9; font-size:14px; color:#2d3436;">
+                            <option value="grandma">慈祥奶奶</option>
+                            <option value="grandpa">和蔼爷爷</option>
+                            <option value="mom">温柔妈妈</option>
+                            <option value="sister">活泼姐姐</option>
+                            <option value="brother">调皮哥哥</option>
+                            <option value="teacher">温柔老师</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <div style="text-align: center;">
@@ -683,6 +732,8 @@
             const ttsProvider = document.getElementById('ttsProvider').value;
             const imageProvider = document.getElementById('imageProvider').value;
             const imageStyle = document.getElementById('imageStyle').value;
+            const polish = document.getElementById('polishToggle').checked;
+            const narrator = document.getElementById('narrator').value;
             
             const btn = document.getElementById('generateBtn');
             btn.disabled = true;
@@ -700,7 +751,9 @@
                         story_text: story, 
                         tts_provider: ttsProvider,
                         image_provider: imageProvider,
-                        image_style: imageStyle
+                        image_style: imageStyle,
+                        polish: polish,
+                        narrator: narrator
                     })
                 });
                 const data = await resp.json();

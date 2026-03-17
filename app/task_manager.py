@@ -33,19 +33,21 @@ class TaskManager:
                 created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None,
                 tts_provider=row.get('tts_provider', 'edge'),
                 image_provider=row.get('image_provider', 'huggingface'),
-                image_style=row.get('image_style', 'cartoon')
+                image_style=row.get('image_style', 'cartoon'),
+                polish=bool(row.get('polish', 0)),
+                narrator=row.get('narrator', 'grandma')
             )
             self.tasks[task.task_id] = task
             if task.status == TaskStatus.PROCESSING:
                 self._processing_count += 1
     
-    async def create_task(self, story_text: str, tts_provider: str = "edge", image_provider: str = "huggingface", image_style: str = "cartoon") -> Task:
+    async def create_task(self, story_text: str, tts_provider: str = "edge", image_provider: str = "huggingface", image_style: str = "cartoon", polish: bool = False, narrator: str = "grandma") -> Task:
         if self._processing_count >= self._max_concurrent:
             raise Exception("当前任务数已达上限，请稍后再试")
         
         task_id = str(uuid.uuid4())
         now = datetime.now()
-        task = Task(task_id=task_id, story_text=story_text, created_at=now, tts_provider=tts_provider, image_provider=image_provider, image_style=image_style)
+        task = Task(task_id=task_id, story_text=story_text, created_at=now, tts_provider=tts_provider, image_provider=image_provider, image_style=image_style, polish=polish, narrator=narrator)
         self.tasks[task_id] = task
         self._processing_count += 1
         
@@ -61,7 +63,9 @@ class TaskManager:
             created_at=now.isoformat(),
             tts_provider=tts_provider,
             image_provider=image_provider,
-            image_style=image_style
+            image_style=image_style,
+            polish=polish,
+            narrator=narrator
         )
         return task
     
@@ -82,7 +86,9 @@ class TaskManager:
             created_at=task.created_at.isoformat() if task.created_at else None,
             tts_provider=task.tts_provider,
             image_provider=task.image_provider,
-            image_style=task.image_style
+            image_style=task.image_style,
+            polish=task.polish,
+            narrator=task.narrator
         )
     
     async def cancel_task(self, task_id: str) -> bool:
