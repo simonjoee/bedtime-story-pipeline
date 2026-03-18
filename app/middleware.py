@@ -5,7 +5,7 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-from app.auth import COOKIE_NAME, get_session
+from app.auth import COOKIE_NAME, get_session, REQUIRE_LOGIN
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +30,10 @@ PUBLIC_PREFIXES = [
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         path = request.url.path
+        
+        # 如果不需要登录，直接放行
+        if not REQUIRE_LOGIN:
+            return await call_next(request)
         
         for public_path in PUBLIC_PATHS:
             if path == public_path or path.startswith(public_path):

@@ -9,6 +9,12 @@ class TaskStatus(str, Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
 
+class Segment(BaseModel):
+    text: str = ""
+    image_prompt: str = ""
+    image_path: Optional[str] = None
+    audio_path: Optional[str] = None
+
 class Task(BaseModel):
     task_id: str
     status: TaskStatus = TaskStatus.PROCESSING
@@ -24,3 +30,4 @@ class Task(BaseModel):
     image_style: Optional[str] = "cartoon"
     polish: bool = False
     narrator: str = "grandma"
+    segments: list[Segment] = []

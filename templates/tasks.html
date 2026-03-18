@@ -489,6 +489,17 @@
             </div>
         </div>
     </div>
+
+    <!-- Storyboard Modal -->
+    <div id="storyboardModal" class="modal-overlay">
+        <div class="modal-card" style="max-width:700px; max-height:90vh">
+            <div class="modal-header">
+                <div class="modal-title">📝 故事板</div>
+                <button class="close-modal" onclick="closeStoryboardModal()">&times;</button>
+            </div>
+            <div id="storyboardBody" style="padding:20px; overflow-y:auto; max-height:calc(90vh - 120px)"></div>
+        </div>
+    </div>
     
     <script>
         const basePath = "{{ base_path }}";
@@ -514,6 +525,7 @@
             if (!await checkAuth()) return;
             loadTasks();
             setInterval(loadTasks, 10000);
+            resetBtn();
         }
         
         function showTab(tab) {
@@ -532,8 +544,9 @@
         };
         
         const stepNames = {
+            'storyboard': '故事板',
             'split_text': '文本分段',
-            'tts': 'TTS生成',
+            'tts': '音频生成',
             'image': '图像生成',
             'video': '视频合成'
         };
@@ -621,6 +634,7 @@
                             </td>
                             <td onclick="event.stopPropagation()">
                                 <button class="btn-sm btn-view" onclick="showDetail('${task.task_id}')">详情</button>
+                                <button class="btn-sm btn-view" style="margin-left:4px" onclick="showStoryboard('${task.task_id}')">故事板</button>
                                 ${cancelBtn}
                                 ${ytBtn}
                             </td>
@@ -650,7 +664,10 @@
                 modalBody.innerHTML = `
                     <div class="detail-item">
                         <div class="detail-label">任务 ID</div>
-                        <div class="detail-content" style="font-family:monospace">${task.task_id}</div>
+                        <div style="display:flex; align-items:center; gap:8px">
+                            <input type="text" value="${task.task_id}" readonly style="flex:1; padding:8px; border:1px solid #ddd; border-radius:4px; font-family:monospace; font-size:12px; background:#f8f9fa;">
+                            <span style="cursor:pointer; padding:8px;" onclick="navigator.clipboard.writeText('${task.task_id}');this.textContent='✅'" title="复制">📋</span>
+                        </div>
                     </div>
                     <div style="display:flex; gap:20px">
                         <div class="detail-item" style="flex:1">
@@ -711,6 +728,200 @@
         function closeModal() {
             document.getElementById('detailModal').classList.remove('active');
         }
+        
+        let currentStoryboardTaskId = null;
+        
+        async function showStoryboard(taskId) {
+            currentStoryboardTaskId = taskId;
+            document.getElementById('storyboardBody').innerHTML = '<div style="text-align:center; padding:40px;">加载中...</div>';
+            document.getElementById('storyboardModal').classList.add('active');
+            
+            try {
+                const resp = await fetch(basePath + '/api/storyboard/' + taskId);
+                const data = await resp.json();
+                
+                if (data.error) {
+                    document.getElementById('storyboardBody').innerHTML = '<div style="text-align:center; padding:40px; color:#e74c3c">' + data.error.message + '</div>';
+                    return;
+                }
+                
+                if (!data.segments || data.segments.length === 0) {
+                    document.getElementById('storyboardBody').innerHTML = '<div style="text-align:center; padding:40px;">暂无故事板数据</div>';
+                    return;
+                }
+                
+                let html = '';
+                data.segments.forEach((seg, idx) => {
+                    html += `
+                        <div style="background:#f8f9fa; border-radius:8px; padding:16px; margin-bottom:16px;">
+                            <div style="font-weight:bold; margin-bottom:8px; color:#636e72">片段 ${idx + 1}</div>
+                            <div style="margin-bottom:8px">
+                                <div style="font-size:12px; color:#636e72; margin-bottom:4px">故事文本</div>
+                                <textarea id="sb-text-${idx}" rows="3" style="width:100%; padding:8px; border:1px solid #dfe6e9; border-radius:4px; resize:vertical; font-size:14px;">${seg.text || ''}</textarea>
+                            </div>
+                            <div>
+                                <div style="font-size:12px; color:#636e72; margin-bottom:4px">图片 Prompt</div>
+                                <div style="display:flex; gap:8px; align-items:flex-start">
+                                    <textarea id="sb-prompt-${idx}" rows="2" style="flex:1; padding:8px; border:1px solid #dfe6e9; border-radius:4px; resize:vertical; font-size:14px;">${seg.image_prompt || ''}</textarea>
+                                    <button onclick="regenerateOneSegment(${idx})" style="padding:8px 12px; background:#00b894; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; white-space:nowrap;">重新生成图片</button>
+                                </div>
+                                <div style="margin-top:8px; display:flex; gap:8px; align-items:flex-start">
+                                    <div style="flex:1; font-size:12px; color:#636e72;">当前音频: ${seg.audio_path ? '已生成' : '未生成'}</div>
+                                    <button onclick="regenerateOneTTS(${idx})" style="padding:8px 12px; background:#e17055; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; white-space:nowrap;">重新生成音频</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                    <div style="display:flex; gap:12px; margin-top:20px;">
+                        <button onclick="regenerateStoryboard()" style="padding:10px 24px; background:#00b894; color:white; border:none; border-radius:4px; cursor:pointer; font-size:14px;">重新生成视频</button>
+                    </div>
+                `;
+                
+                document.getElementById('storyboardBody').innerHTML = html;
+                
+            } catch (e) {
+                document.getElementById('storyboardBody').innerHTML = '<div style="text-align:center; padding:40px; color:#e74c3c">网络错误: ' + e.message + '</div>';
+            }
+        }
+        
+        async function saveStoryboard() {
+            if (!currentStoryboardTaskId) return;
+            
+            const segments = [];
+            const segmentCount = document.querySelectorAll('[id^="sb-text-"]').length;
+            
+            for (let i = 0; i < segmentCount; i++) {
+                segments.push({
+                    text: document.getElementById('sb-text-' + i).value,
+                    image_prompt: document.getElementById('sb-prompt-' + i).value
+                });
+            }
+            
+            try {
+                const resp = await fetch(basePath + '/api/storyboard/' + currentStoryboardTaskId, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({segments})
+                });
+                const data = await resp.json();
+                
+                if (data.status === 'ok') {
+                    alert('保存成功！');
+                } else {
+                    alert('保存失败: ' + (data.error?.message || '未知错误'));
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+        }
+        
+        async function regenerateStoryboard() {
+            if (!currentStoryboardTaskId) return;
+            
+            if (!confirm('重新生成将覆盖当前视频，确定要继续吗？')) return;
+            
+            const btn = document.querySelector('#storyboardBody button:last-child');
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+            
+            try {
+                const resp = await fetch(basePath + '/api/regenerate/' + currentStoryboardTaskId, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({indices: []})
+                });
+                const data = await resp.json();
+                
+                if (data.video_url) {
+                    alert('重新生成完成！');
+                    closeStoryboardModal();
+                    loadTasks();
+                } else {
+                    alert('重新生成失败');
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+            
+            btn.disabled = false;
+            btn.textContent = '重新生成';
+        }
+        
+        async function regenerateOneSegment(idx) {
+            if (!currentStoryboardTaskId) return;
+            
+            const btn = document.querySelectorAll('#storyboardBody button')[idx + 1];
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '生成中...';
+            }
+            
+            try {
+                const resp = await fetch(basePath + '/api/regenerate/' + currentStoryboardTaskId, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({indices: [idx]})
+                });
+                const data = await resp.json();
+                
+                if (data.video_url) {
+                    alert('片段 ' + (idx + 1) + ' 重新生成完成！');
+                } else {
+                    alert('重新生成失败');
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+            
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '重新生成图片';
+            }
+        }
+        
+        async function regenerateOneTTS(idx) {
+            if (!currentStoryboardTaskId) return;
+            
+            const btn = document.querySelectorAll('#storyboardBody button')[idx + 2];
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '生成中...';
+            }
+            
+            try {
+                const resp = await fetch(basePath + '/api/regenerate-tts/' + currentStoryboardTaskId, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({indices: [idx]})
+                });
+                const data = await resp.json();
+                
+                if (data.video_url) {
+                    alert('片段 ' + (idx + 1) + ' 音频重新生成完成！');
+                } else {
+                    alert('重新生成失败');
+                }
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+            
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '重新生成音频';
+            }
+        }
+        
+        function closeStoryboardModal() {
+            document.getElementById('storyboardModal').classList.remove('active');
+            currentStoryboardTaskId = null;
+        }
+        
+        document.getElementById('storyboardModal').addEventListener('click', function(e) {
+            if (e.target === this) closeStoryboardModal();
+        });
         
         function refreshDetail() {
             if (currentDetailTaskId) {

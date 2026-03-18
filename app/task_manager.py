@@ -1,5 +1,5 @@
 from typing import Dict, Optional
-from app.models import Task, TaskStatus
+from app.models import Task, TaskStatus, Segment
 from app.database import save_task, get_task as db_get_task, get_all_tasks as db_get_all_tasks, init_db, delete_task as db_delete_task
 from datetime import datetime
 import uuid
@@ -21,6 +21,8 @@ class TaskManager:
     async def _load_tasks_from_db(self):
         db_tasks = await db_get_all_tasks()
         for row in db_tasks:
+            segments_data = json.loads(row['segments']) if row.get('segments') else []
+            segments = [Segment(**s) for s in segments_data]
             task = Task(
                 task_id=row['task_id'],
                 status=TaskStatus(row['status']),
@@ -35,7 +37,8 @@ class TaskManager:
                 image_provider=row.get('image_provider', 'huggingface'),
                 image_style=row.get('image_style', 'cartoon'),
                 polish=bool(row.get('polish', 0)),
-                narrator=row.get('narrator', 'grandma')
+                narrator=row.get('narrator', 'grandma'),
+                segments=segments
             )
             self.tasks[task.task_id] = task
             if task.status == TaskStatus.PROCESSING:
@@ -47,7 +50,7 @@ class TaskManager:
         
         task_id = str(uuid.uuid4())
         now = datetime.now()
-        task = Task(task_id=task_id, story_text=story_text, created_at=now, tts_provider=tts_provider, image_provider=image_provider, image_style=image_style, polish=polish, narrator=narrator)
+        task = Task(task_id=task_id, story_text=story_text, created_at=now, tts_provider=tts_provider, image_provider=image_provider, image_style=image_style, polish=polish, narrator=narrator, segments=[])
         self.tasks[task_id] = task
         self._processing_count += 1
         
@@ -88,7 +91,8 @@ class TaskManager:
             image_provider=task.image_provider,
             image_style=task.image_style,
             polish=task.polish,
-            narrator=task.narrator
+            narrator=task.narrator,
+            segments=[s.model_dump() for s in task.segments] if task.segments else None
         )
     
     async def cancel_task(self, task_id: str) -> bool:

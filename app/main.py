@@ -12,7 +12,7 @@ import asyncio
 import os
 import shutil
 
-from app.models import TaskStatus
+from app.models import TaskStatus, Segment
 from app.task_manager import task_manager
 from app.services.image_huggingface import ImageService
 from app.services.image_leonardo import LeonardoImageService
@@ -22,6 +22,7 @@ from app.services.tts_minimax import MiniMaxTTSService
 from app.services.polish_zhipu import PolishService
 from app.services.video import VideoService
 from app.services.youtube import youtube_service
+from app.services.storyboard import storyboard_service
 from app.utils.text import split_text, split_text_by_duration
 from app.auth import verify_password, create_session, delete_session, get_session, COOKIE_NAME, cleanup_expired_sessions
 from app.middleware import AuthMiddleware
@@ -73,26 +74,15 @@ async def process_task(task_id: str, tts_provider: str = "edge", image_provider:
     if not task:
         return
     
-    # 如果需要润色，先润色故事
-    if polish:
-        task.steps["polish"] = {"status": "processing", "message": "正在润色故事..."}
-        await task_manager.update_task(task)
-        
-        polished_story = await polish_service.polish(task.story_text, narrator)
-        if polished_story != task.story_text:
-            task.story_text = polished_story
-            task.steps["polish"] = {"status": "completed", "message": "润色完成"}
-        else:
-            task.steps["polish"] = {"status": "completed", "message": "未做修改"}
-        await task_manager.update_task(task)
+    tts_provider = task.tts_provider or tts_provider
+    image_provider = task.image_provider or image_provider
+    image_style = task.image_style or image_style
     
-    # Select TTS service based on provider
     if tts_provider == "minimax":
         tts_svc = tts_service_minimax
     else:
         tts_svc = tts_service
     
-    # Select Image service based on provider
     if image_provider == "leonardo":
         img_svc = leonardo_image_service
     elif image_provider == "modelscope":
@@ -101,7 +91,7 @@ async def process_task(task_id: str, tts_provider: str = "edge", image_provider:
         img_svc = image_service
     
     task.steps = {
-        "split_text": {"status": "pending", "message": "等待中"},
+        "storyboard": {"status": "pending", "message": "等待中"},
         "tts": {"status": "pending", "message": "等待中"},
         "image": {"status": "pending", "message": "等待中"},
         "video": {"status": "pending", "message": "等待中"}
@@ -115,13 +105,13 @@ async def process_task(task_id: str, tts_provider: str = "edge", image_provider:
             if task.status == TaskStatus.CANCELLED:
                 return
             
-            task.steps["split_text"] = {"status": "processing", "message": "正在分段..."}
+            task.steps["storyboard"] = {"status": "processing", "message": "正在生成故事板..."}
             await task_manager.update_task(task)
             
-            segments = split_text_by_duration(task.story_text, target_duration=30.0)
-            logger.info(f"Split story into {len(segments)} segments")
+            segments_data = await storyboard_service.generate(task.story_text, narrator)
+            task.segments = [Segment(**s) for s in segments_data]
             
-            task.steps["split_text"] = {"status": "completed", "message": f"完成，共 {len(segments)} 段"}
+            task.steps["storyboard"] = {"status": "completed", "message": f"完成，共 {len(task.segments)} 段"}
             task.progress = 10
             await task_manager.update_task(task)
             
@@ -129,27 +119,34 @@ async def process_task(task_id: str, tts_provider: str = "edge", image_provider:
             os.makedirs(f"{task_dir}/images", exist_ok=True)
             os.makedirs(f"{task_dir}/audio", exist_ok=True)
             
+            segments = task.segments
+            texts = [s.text for s in segments]
+            prompts = [s.image_prompt for s in segments]
+            
             task.steps["tts"] = {"status": "processing", "message": "正在生成音频..."}
             task.steps["image"] = {"status": "processing", "message": "正在生成图像..."}
             await task_manager.update_task(task)
             
             image_task = asyncio.create_task(
-                img_svc.generate_for_segments(segments, f"{task_dir}/images", image_style)
+                img_svc.generate_for_segments(prompts, f"{task_dir}/images", image_style)
             )
             audio_task = asyncio.create_task(
-                tts_svc.generate_for_segments(segments, f"{task_dir}/audio")
+                tts_svc.generate_for_segments(texts, f"{task_dir}/audio")
             )
             
             image_result, audio_paths = await asyncio.gather(image_task, audio_task)
             image_paths = image_result[0] if isinstance(image_result, tuple) else image_result
-            image_errors = image_result[1] if isinstance(image_result, tuple) else []
+            
+            for i, path in enumerate(image_paths):
+                if i < len(segments):
+                    segments[i].image_path = path
+            for i, path in enumerate(audio_paths):
+                if i < len(segments):
+                    segments[i].audio_path = path
             
             if len(image_paths) < len(segments):
-                error_msg = image_errors[0]["error"] if image_errors else "图片生成失败"
-                task.steps["image"] = {
-                    "status": "failed", 
-                    "message": f"成功 {len(image_paths)}/{len(segments)} 张"
-                }
+                error_msg = "图片生成失败"
+                task.steps["image"] = {"status": "failed", "message": f"成功 {len(image_paths)}/{len(segments)} 张"}
                 task.status = TaskStatus.FAILED
                 task.error = {"code": "IMAGE_GENERATION_ERROR", "message": error_msg}
                 await task_manager.update_task(task)
@@ -279,7 +276,10 @@ async def get_task(task_id: str):
         "youtube_url": task.youtube_url,
         "error": task.error,
         "steps": task.steps,
-        "created_at": task.created_at.isoformat() if task.created_at else None
+        "created_at": task.created_at.isoformat() if task.created_at else None,
+        "tts_provider": task.tts_provider,
+        "image_provider": task.image_provider,
+        "image_style": task.image_style
     }
 
 @app.delete("/api/task/{task_id}")
@@ -459,6 +459,131 @@ async def upload_to_youtube(task_id: str):
             {"error": {"code": "UPLOAD_FAILED", "message": str(e)}},
             status_code=500
         )
+
+@app.get("/storyboard/{task_id}")
+async def storyboard_page(request: Request, task_id: str):
+    base_path = os.getenv("BASE_PATH", "")
+    return templates.TemplateResponse("storyboard.html", {"request": request, "base_path": base_path, "task_id": task_id})
+
+@app.get("/api/storyboard/{task_id}")
+async def get_storyboard(task_id: str):
+    task = await task_manager.get_task(task_id)
+    if not task:
+        return JSONResponse({"error": {"code": "TASK_NOT_FOUND", "message": "任务不存在"}}, status_code=404)
+    return {
+        "segments": [s.model_dump() for s in task.segments],
+        "steps": task.steps,
+        "status": task.status.value
+    }
+
+@app.put("/api/storyboard/{task_id}")
+async def update_storyboard(task_id: str, request: Request):
+    task = await task_manager.get_task(task_id)
+    if not task:
+        return JSONResponse({"error": {"code": "TASK_NOT_FOUND", "message": "任务不存在"}}, status_code=404)
+    
+    body = await request.json()
+    segments_data = body.get("segments", [])
+    task.segments = [Segment(**s) for s in segments_data]
+    await task_manager.update_task(task)
+    return {"status": "ok"}
+
+@app.post("/api/regenerate/{task_id}")
+async def regenerate_task(task_id: str, request: Request):
+    task = await task_manager.get_task(task_id)
+    if not task:
+        return JSONResponse({"error": {"code": "TASK_NOT_FOUND", "message": "任务不存在"}}, status_code=404)
+    
+    body = await request.json()
+    edited_indices = body.get("indices", [])
+    
+    if not edited_indices:
+        edited_indices = list(range(len(task.segments)))
+    
+    if task.tts_provider == "minimax":
+        tts_svc = tts_service_minimax
+    else:
+        tts_svc = tts_service
+    
+    if task.image_provider == "leonardo":
+        img_svc = leonardo_image_service
+    elif task.image_provider == "modelscope":
+        img_svc = modelscope_image_service
+    else:
+        img_svc = image_service
+    
+    task_dir = f"static/tasks/{task_id}"
+    os.makedirs(f"{task_dir}/images", exist_ok=True)
+    os.makedirs(f"{task_dir}/audio", exist_ok=True)
+    
+    for idx in edited_indices:
+        if idx < len(task.segments):
+            segment = task.segments[idx]
+            
+            image_path = f"{task_dir}/images/image_{idx}.png"
+            success = await img_svc.generate_image(segment.image_prompt, image_path)
+            if success:
+                segment.image_path = image_path
+            
+            audio_path = f"{task_dir}/audio/audio_{idx}.mp3"
+            success = await tts_svc.text_to_speech(segment.text, audio_path)
+            if success:
+                segment.audio_path = audio_path
+    
+    await task_manager.update_task(task)
+    
+    image_paths = [s.image_path for s in task.segments if s.image_path]
+    audio_paths = [s.audio_path for s in task.segments if s.audio_path]
+    
+    if image_paths and audio_paths and len(image_paths) == len(task.segments):
+        video_path = f"static/videos/{task_id}.mp4"
+        video_service.synthesize(image_paths, audio_paths, video_path)
+        task.video_url = f"/static/videos/{task_id}.mp4"
+        await task_manager.update_task(task)
+    
+    return {"status": "ok", "video_url": task.video_url}
+
+@app.post("/api/regenerate-tts/{task_id}")
+async def regenerate_tts_task(task_id: str, request: Request):
+    task = await task_manager.get_task(task_id)
+    if not task:
+        return JSONResponse({"error": {"code": "TASK_NOT_FOUND", "message": "任务不存在"}}, status_code=404)
+    
+    body = await request.json()
+    edited_indices = body.get("indices", [])
+    
+    if not edited_indices:
+        edited_indices = list(range(len(task.segments)))
+    
+    if task.tts_provider == "minimax":
+        tts_svc = tts_service_minimax
+    else:
+        tts_svc = tts_service
+    
+    task_dir = f"static/tasks/{task_id}"
+    os.makedirs(f"{task_dir}/audio", exist_ok=True)
+    
+    for idx in edited_indices:
+        if idx < len(task.segments):
+            segment = task.segments[idx]
+            
+            audio_path = f"{task_dir}/audio/audio_{idx}.mp3"
+            success = await tts_svc.text_to_speech(segment.text, audio_path)
+            if success:
+                segment.audio_path = audio_path
+    
+    await task_manager.update_task(task)
+    
+    image_paths = [s.image_path for s in task.segments if s.image_path]
+    audio_paths = [s.audio_path for s in task.segments if s.audio_path]
+    
+    if image_paths and audio_paths and len(image_paths) == len(task.segments):
+        video_path = f"static/videos/{task_id}.mp4"
+        video_service.synthesize(image_paths, audio_paths, video_path)
+        task.video_url = f"/static/videos/{task_id}.mp4"
+        await task_manager.update_task(task)
+    
+    return {"status": "ok", "video_url": task.video_url}
 
 @app.on_event("startup")
 async def startup():

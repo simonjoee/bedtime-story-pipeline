@@ -5,6 +5,7 @@ from typing import Optional
 
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 SESSION_SECRET = os.getenv("SESSION_SECRET", "default-secret-change-me")
+REQUIRE_LOGIN = os.getenv("REQUIRE_LOGIN", "true").lower() == "true"
 
 sessions: dict = {}
 
