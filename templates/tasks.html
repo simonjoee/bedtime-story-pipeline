@@ -331,6 +331,25 @@
         @media (min-width: 1600px) {
             .app-container { max-width: 1300px; }
         }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 10000;
+            animation: toastIn 0.3s ease;
+        }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--error); }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -506,6 +525,14 @@
         let currentPage = 1;
         let totalPages = 1;
         let currentDetailTaskId = null;
+        
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
         
         async function checkAuth() {
             try {
@@ -761,14 +788,12 @@
                             </div>
                             <div>
                                 <div style="font-size:12px; color:#636e72; margin-bottom:4px">图片 Prompt</div>
-                                <div style="display:flex; gap:8px; align-items:flex-start">
-                                    <textarea id="sb-prompt-${idx}" rows="2" style="flex:1; padding:8px; border:1px solid #dfe6e9; border-radius:4px; resize:vertical; font-size:14px;">${seg.image_prompt || ''}</textarea>
-                                    <button onclick="regenerateOneSegment(${idx})" style="padding:8px 12px; background:#00b894; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; white-space:nowrap;">重新生成图片</button>
-                                </div>
-                                <div style="margin-top:8px; display:flex; gap:8px; align-items:flex-start">
-                                    <div style="flex:1; font-size:12px; color:#636e72;">当前音频: ${seg.audio_path ? '已生成' : '未生成'}</div>
-                                    <button onclick="regenerateOneTTS(${idx})" style="padding:8px 12px; background:#e17055; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; white-space:nowrap;">重新生成音频</button>
-                                </div>
+                                <textarea id="sb-prompt-${idx}" rows="2" style="width:100%; padding:8px; border:1px solid #dfe6e9; border-radius:4px; resize:vertical; font-size:14px;">${seg.image_prompt || ''}</textarea>
+                            </div>
+                            ${seg.image_path ? `<img src="${basePath}/${seg.image_path}?t=${Date.now()}" style="width:100%; max-height:180px; object-fit:contain; margin-top:12px; border-radius:4px; background:#eee;" alt="生成图片">` : ''}
+                            <div style="margin-top:12px; display:flex; gap:8px;">
+                                <button id="regen-img-${idx}" onclick="regenerateOneSegment(${idx})" style="flex:1; padding:8px 12px; background:#00b894; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px;">重新生成图片</button>
+                                <button id="regen-tts-${idx}" onclick="regenerateOneTTS(${idx})" style="flex:1; padding:8px 12px; background:#e17055; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px;">重新生成音频</button>
                             </div>
                         </div>
                     `;
@@ -776,7 +801,7 @@
                 
                 html += `
                     <div style="display:flex; gap:12px; margin-top:20px;">
-                        <button onclick="regenerateStoryboard()" style="padding:10px 24px; background:#00b894; color:white; border:none; border-radius:4px; cursor:pointer; font-size:14px;">重新生成视频</button>
+                        <button onclick="regenerateStoryboard()" style="padding:10px 24px; background:#00b894; color:white; border:none; border-radius:4px; cursor:pointer; font-size:14px;">重新合成视频</button>
                     </div>
                 `;
                 
@@ -784,6 +809,12 @@
                 
             } catch (e) {
                 document.getElementById('storyboardBody').innerHTML = '<div style="text-align:center; padding:40px; color:#e74c3c">网络错误: ' + e.message + '</div>';
+            }
+        }
+        
+        async function loadStoryboard(taskId) {
+            if (taskId) {
+                await showStoryboard(taskId);
             }
         }
         
@@ -836,14 +867,14 @@
                 const data = await resp.json();
                 
                 if (data.video_url) {
-                    alert('重新生成完成！');
+                    showToast('视频生成完成！', 'success');
                     closeStoryboardModal();
                     loadTasks();
                 } else {
-                    alert('重新生成失败');
+                    showToast('视频生成失败', 'error');
                 }
             } catch (e) {
-                alert('网络错误: ' + e.message);
+                showToast('网络错误: ' + e.message, 'error');
             }
             
             btn.disabled = false;
@@ -853,7 +884,7 @@
         async function regenerateOneSegment(idx) {
             if (!currentStoryboardTaskId) return;
             
-            const btn = document.querySelectorAll('#storyboardBody button')[idx + 1];
+            const btn = document.getElementById('regen-img-' + idx);
             if (btn) {
                 btn.disabled = true;
                 btn.textContent = '生成中...';
@@ -867,13 +898,14 @@
                 });
                 const data = await resp.json();
                 
-                if (data.video_url) {
-                    alert('片段 ' + (idx + 1) + ' 重新生成完成！');
+                if (resp.ok) {
+                    showToast('片段 ' + (idx + 1) + ' 图片生成完成！', 'success');
+                    loadStoryboard(currentStoryboardTaskId);
                 } else {
-                    alert('重新生成失败');
+                    showToast('生成失败: ' + (data.error?.message || '未知错误'), 'error');
                 }
             } catch (e) {
-                alert('网络错误: ' + e.message);
+                showToast('网络错误: ' + e.message, 'error');
             }
             
             if (btn) {
@@ -885,7 +917,7 @@
         async function regenerateOneTTS(idx) {
             if (!currentStoryboardTaskId) return;
             
-            const btn = document.querySelectorAll('#storyboardBody button')[idx + 2];
+            const btn = document.getElementById('regen-tts-' + idx);
             if (btn) {
                 btn.disabled = true;
                 btn.textContent = '生成中...';
@@ -899,13 +931,13 @@
                 });
                 const data = await resp.json();
                 
-                if (data.video_url) {
-                    alert('片段 ' + (idx + 1) + ' 音频重新生成完成！');
+                if (resp.ok) {
+                    showToast('片段 ' + (idx + 1) + ' 音频生成完成！', 'success');
                 } else {
-                    alert('重新生成失败');
+                    showToast('生成失败: ' + (data.error?.message || '未知错误'), 'error');
                 }
             } catch (e) {
-                alert('网络错误: ' + e.message);
+                showToast('网络错误: ' + e.message, 'error');
             }
             
             if (btn) {

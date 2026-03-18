@@ -8,12 +8,12 @@ from app.utils.retry import async_retry
 logger = logging.getLogger(__name__)
 
 IMAGE_STYLE_PROMPTS = {
-    "cartoon": "cartoon style, animated, children's book illustration, cute, whimsical",
-    "watercolor": "watercolor painting, soft colors, gentle, pastel colors",
-    "realistic": "realistic, photorealistic, photograph",
-    "oil_painting": "oil painting style, artistic, painterly",
-    "3d": "3D render, Pixar style, CGI, digital art, animated character",
-    "illustration": "illustration, children's book art, whimsical, colorful"
+    "cartoon": "cartoon style, animated, children's book illustration, cute, whimsical, pure visual storytelling, absolutely no text, no words, no letters, no numbers, no signage, no labels, no captions, no writing of any kind",
+    "watercolor": "watercolor painting, soft colors, gentle, pastel colors, pure visual storytelling, absolutely no text, no words, no letters, no numbers, no signage, no labels, no captions, no writing of any kind",
+    "realistic": "realistic, photorealistic, photograph, pure visual storytelling, absolutely no text, no words, no letters, no numbers, no signage, no labels, no captions, no writing of any kind",
+    "oil_painting": "oil painting style, artistic, painterly, pure visual storytelling, absolutely no text, no words, no letters, no numbers, no signage, no labels, no captions, no writing of any kind",
+    "3d": "3D render, Pixar style, CGI, digital art, animated character, pure visual storytelling, absolutely no text, no words, no letters, no numbers, no signage, no labels, no captions, no writing of any kind",
+    "illustration": "illustration, children's book art, whimsical, colorful, pure visual storytelling, absolutely no text, no words, no letters, no numbers, no signage, no labels, no captions, no writing of any kind"
 }
 
 class LeonardoImageService:

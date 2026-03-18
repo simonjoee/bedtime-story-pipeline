@@ -1,6 +1,14 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+import os
+http_proxy = os.getenv("HTTP_PROXY")
+https_proxy = os.getenv("HTTPS_PROXY")
+if http_proxy:
+    os.environ["HTTP_PROXY"] = http_proxy
+if https_proxy:
+    os.environ["HTTPS_PROXY"] = https_proxy
+
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -36,23 +44,22 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Bedtime Story Pipeline")
 app.add_middleware(AuthMiddleware)
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+BASE_PATH = os.getenv("BASE_PATH", "")
+
+app.mount(f"{BASE_PATH}/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-@app.get("/login")
+@app.get(f"{BASE_PATH}/login")
 async def login_page(request: Request):
-    base_path = os.getenv("BASE_PATH", "")
-    return templates.TemplateResponse("login.html", {"request": request, "base_path": base_path})
+    return templates.TemplateResponse("login.html", {"request": request, "base_path": BASE_PATH})
 
-@app.get("/")
+@app.get(f"{BASE_PATH}/")
 async def home(request: Request):
-    base_path = os.getenv("BASE_PATH", "")
-    return templates.TemplateResponse("tasks.html", {"request": request, "base_path": base_path})
+    return templates.TemplateResponse("tasks.html", {"request": request, "base_path": BASE_PATH})
 
-@app.get("/tasks")
+@app.get(f"{BASE_PATH}/tasks")
 async def tasks_page(request: Request):
-    base_path = os.getenv("BASE_PATH", "")
-    return templates.TemplateResponse("tasks.html", {"request": request, "base_path": base_path})
+    return templates.TemplateResponse("tasks.html", {"request": request, "base_path": BASE_PATH})
 
 image_service = ImageService()
 leonardo_image_service = LeonardoImageService()
@@ -68,6 +75,9 @@ class GenerateRequest(BaseModel):
     image_style: str = "cartoon"
     polish: bool = False
     narrator: str = "grandma"
+
+class LoginRequest(BaseModel):
+    password: str
 
 async def process_task(task_id: str, tts_provider: str = "edge", image_provider: str = "huggingface", image_style: str = "cartoon", polish: bool = False, narrator: str = "grandma"):
     task = await task_manager.get_task(task_id)
@@ -190,7 +200,7 @@ async def process_task(task_id: str, tts_provider: str = "edge", image_provider:
     finally:
         await task_manager.complete_task(task_id)
 
-@app.post("/api/generate")
+@app.post(f"{BASE_PATH}/api/generate")
 async def generate_video(request: Request):
     body = await request.json()
     story_text = body.get("story_text", "").strip()
@@ -218,7 +228,7 @@ async def generate_video(request: Request):
     
     return {"task_id": task.task_id, "status": "processing"}
 
-@app.post("/api/upload-images/{task_id}")
+@app.post(f"{BASE_PATH}/api/upload-images/{{task_id}}")
 async def upload_images(task_id: str, request: Request):
     task = await task_manager.get_task(task_id)
     if not task:
@@ -259,7 +269,7 @@ async def upload_images(task_id: str, request: Request):
             status_code=500
         )
 
-@app.get("/api/task/{task_id}")
+@app.get(f"{BASE_PATH}/api/task/{{task_id}}")
 async def get_task(task_id: str):
     task = await task_manager.get_task(task_id)
     if not task:
@@ -282,18 +292,15 @@ async def get_task(task_id: str):
         "image_style": task.image_style
     }
 
-@app.delete("/api/task/{task_id}")
-async def cancel_task(task_id: str):
-    success = await task_manager.cancel_task(task_id)
+@app.delete(f"{BASE_PATH}/api/task/{{task_id}}")
+async def delete_task_v1(task_id: str):
+    success = await task_manager.delete_task(task_id)
     if not success:
-        return JSONResponse(
-            {"error": {"code": "TASK_NOT_FOUND", "message": "任务不存在"}},
-            status_code=404
-        )
-    return {"task_id": task_id, "status": "cancelled"}
+        return JSONResponse({"error": {"code": "TASK_NOT_FOUND", "message": "任务不存在"}}, status_code=404)
+    return {"status": "ok"}
 
-@app.delete("/api/task/{task_id}/delete")
-async def delete_task(task_id: str):
+@app.delete(f"{BASE_PATH}/api/task/{{task_id}}/delete")
+async def delete_task_v2(task_id: str):
     success = await task_manager.delete_task(task_id)
     if not success:
         return JSONResponse(
@@ -302,7 +309,7 @@ async def delete_task(task_id: str):
         )
     return {"task_id": task_id, "message": "已删除"}
 
-@app.get("/api/tasks")
+@app.get(f"{BASE_PATH}/api/tasks")
 async def list_tasks(page: int = 1, page_size: int = 10):
     all_tasks = await task_manager.list_tasks()
     all_tasks.sort(key=lambda t: t.created_at or "", reverse=True)
@@ -343,20 +350,11 @@ async def list_tasks(page: int = 1, page_size: int = 10):
         "processing_count": task_manager._processing_count
     }
 
-@app.get("/health")
+@app.get(f"{BASE_PATH}/health")
 async def health_check():
-    ffmpeg_ok = video_service.check_ffmpeg()
-    return JSONResponse({
-        "status": "healthy" if ffmpeg_ok else "degraded",
-        "services": {
-            "ffmpeg": "ok" if ffmpeg_ok else "not found"
-        }
-    })
+    return {"status": "ok"}
 
-class LoginRequest(BaseModel):
-    password: str
-
-@app.post("/api/login")
+@app.post(f"{BASE_PATH}/api/login")
 async def login(request: LoginRequest):
     if verify_password(request.password):
         session_id = create_session()
@@ -374,7 +372,7 @@ async def login(request: LoginRequest):
         status_code=401
     )
 
-@app.post("/api/logout")
+@app.post(f"{BASE_PATH}/api/logout")
 async def logout(request: Request):
     session_id = request.cookies.get(COOKIE_NAME)
     if session_id:
@@ -383,7 +381,7 @@ async def logout(request: Request):
     response.delete_cookie(COOKIE_NAME)
     return response
 
-@app.get("/api/check-auth")
+@app.get(f"{BASE_PATH}/api/check-auth")
 async def check_auth(request: Request):
     session_id = request.cookies.get(COOKIE_NAME)
     session = get_session(session_id) if session_id else None
@@ -417,7 +415,7 @@ async def cleanup_old_files():
         except Exception as e:
             logger.error(f"Cleanup failed: {e}")
 
-@app.post("/api/upload-youtube/{task_id}")
+@app.post(f"{BASE_PATH}/api/upload-youtube/{{task_id}}")
 async def upload_to_youtube(task_id: str):
     task = await task_manager.get_task(task_id)
     if not task:
@@ -460,12 +458,12 @@ async def upload_to_youtube(task_id: str):
             status_code=500
         )
 
-@app.get("/storyboard/{task_id}")
+@app.get(f"{BASE_PATH}/storyboard/{{task_id}}")
 async def storyboard_page(request: Request, task_id: str):
     base_path = os.getenv("BASE_PATH", "")
     return templates.TemplateResponse("storyboard.html", {"request": request, "base_path": base_path, "task_id": task_id})
 
-@app.get("/api/storyboard/{task_id}")
+@app.get(f"{BASE_PATH}/api/storyboard/{{task_id}}")
 async def get_storyboard(task_id: str):
     task = await task_manager.get_task(task_id)
     if not task:
@@ -476,7 +474,7 @@ async def get_storyboard(task_id: str):
         "status": task.status.value
     }
 
-@app.put("/api/storyboard/{task_id}")
+@app.put(f"{BASE_PATH}/api/storyboard/{{task_id}}")
 async def update_storyboard(task_id: str, request: Request):
     task = await task_manager.get_task(task_id)
     if not task:
@@ -488,7 +486,7 @@ async def update_storyboard(task_id: str, request: Request):
     await task_manager.update_task(task)
     return {"status": "ok"}
 
-@app.post("/api/regenerate/{task_id}")
+@app.post(f"{BASE_PATH}/api/regenerate/{{task_id}}")
 async def regenerate_task(task_id: str, request: Request):
     task = await task_manager.get_task(task_id)
     if not task:
@@ -520,15 +518,21 @@ async def regenerate_task(task_id: str, request: Request):
         if idx < len(task.segments):
             segment = task.segments[idx]
             
-            image_path = f"{task_dir}/images/image_{idx}.png"
-            success = await img_svc.generate_image(segment.image_prompt, image_path)
-            if success:
-                segment.image_path = image_path
+            try:
+                image_path = f"{task_dir}/images/image_{idx}.png"
+                success = await img_svc.generate_image(segment.image_prompt, image_path)
+                if success:
+                    segment.image_path = image_path
+            except Exception as e:
+                logger.error(f"Failed to regenerate image for segment {idx}: {e}")
             
-            audio_path = f"{task_dir}/audio/audio_{idx}.mp3"
-            success = await tts_svc.text_to_speech(segment.text, audio_path)
-            if success:
-                segment.audio_path = audio_path
+            try:
+                audio_path = f"{task_dir}/audio/audio_{idx}.mp3"
+                success = await tts_svc.text_to_speech(segment.text, audio_path)
+                if success:
+                    segment.audio_path = audio_path
+            except Exception as e:
+                logger.error(f"Failed to regenerate audio for segment {idx}: {e}")
     
     await task_manager.update_task(task)
     
@@ -543,7 +547,7 @@ async def regenerate_task(task_id: str, request: Request):
     
     return {"status": "ok", "video_url": task.video_url}
 
-@app.post("/api/regenerate-tts/{task_id}")
+@app.post(f"{BASE_PATH}/api/regenerate-tts/{{task_id}}")
 async def regenerate_tts_task(task_id: str, request: Request):
     task = await task_manager.get_task(task_id)
     if not task:

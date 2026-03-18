@@ -13,13 +13,14 @@ class TTSService:
         self.voice = os.getenv("TTS_VOICE", "zh-CN-YunxiNeural")
         self.rate = os.getenv("TTS_RATE", "-10%")
         self.pitch = os.getenv("TTS_PITCH", "-10Hz")
+        self.proxy = os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY")
     
     @async_retry(max_attempts=3, base_delay=2)
     async def text_to_speech(self, text: str, output_path: str) -> bool:
         try:
             logger.info(f"Generating TTS: {text[:30]}...")
             
-            communicate = edge_tts.Communicate(text, self.voice, rate=self.rate, pitch=self.pitch)
+            communicate = edge_tts.Communicate(text, self.voice, rate=self.rate, pitch=self.pitch, proxy=self.proxy)
             await communicate.save(output_path)
             
             logger.info(f"TTS saved: {output_path}")
