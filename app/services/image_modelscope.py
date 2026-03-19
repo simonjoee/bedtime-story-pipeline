@@ -6,35 +6,35 @@ import aiohttp
 logger = logging.getLogger(__name__)
 
 IMAGE_STYLE_PROMPTS = {
-    "cartoon": "cartoon style, animated, children's book illustration, cute, whimsical, pure visual storytelling, absolutely no text, no words, no letters, no numbers, no signage, no labels, no captions, no writing of any kind",
-    "watercolor": "watercolor painting, soft colors, gentle, pastel colors, pure visual storytelling, absolutely no text, no words, no letters, no numbers, no signage, no labels, no captions, no writing of any kind",
-    "realistic": "realistic, photorealistic, photograph, pure visual storytelling, absolutely no text, no words, no letters, no numbers, no signage, no labels, no captions, no writing of any kind",
-    "oil_painting": "oil painting style, artistic, painterly, pure visual storytelling, absolutely no text, no words, no letters, no numbers, no signage, no labels, no captions, no writing of any kind",
-    "3d": "3D render, Pixar style, CGI, digital art, animated character, pure visual storytelling, absolutely no text, no words, no letters, no numbers, no signage, no labels, no captions, no writing of any kind",
-    "illustration": "illustration, children's book art, whimsical, colorful, pure visual storytelling, absolutely no text, no words, no letters, no numbers, no signage, no labels, no captions, no writing of any kind"
+    "cartoon": "cartoon style, animated, children's book illustration, cute, whimsical",
+    "watercolor": "watercolor painting, soft colors, gentle, pastel colors",
+    "realistic": "realistic, photorealistic, photograph",
+    "oil_painting": "oil painting style, artistic, painterly",
+    "3d": "3D render, Pixar style, CGI, digital art, animated character",
+    "illustration": "illustration, children's book art, whimsical, colorful"
 }
+
 
 class ModelScopeImageService:
     def __init__(self):
-        self.api_key = os.getenv("DASHSCOPE_API_KEY", "")
-        self.base_url = "https://dashscope.aliyuncs.com/api/v1/services/aigc/text2image/image-synthesis"
-        self.model = os.getenv("DASHSCOPE_MODEL", "wanx2.1-t2i-turbo")
-        self.size = "1280*720"
+        self.api_key = os.getenv("MODELSCOPE_API_KEY", "")
+        self.base_url = "https://api-inference.modelscope.cn"
+        self.model = "Qwen/Qwen-Image-2512"
         self.timeout = 300
     
     async def generate_image(self, prompt: str, output_path: str, style: str = "cartoon") -> bool:
+        if not self.api_key:
+            logger.warning("MODELSCOPE_API_KEY not set")
+            return False
+        
         try:
             style_prompt = IMAGE_STYLE_PROMPTS.get(style, IMAGE_STYLE_PROMPTS["cartoon"])
             full_prompt = f"{prompt}, {style_prompt}"
-            logger.info(f"Generating image with ModelScope: {prompt[:50]}... style: {style}")
+            logger.info(f"Generating image with Qwen-Image-2512: {prompt[:50]}... style: {style}")
             
             async with asyncio.timeout(self.timeout):
-                task_id = await self._create_task(prompt)
-                
-                result = await self._wait_for_result(task_id)
-                
-                image_url = result["output"]["results"][0]["url"]
-                
+                task_id = await self._create_task(full_prompt)
+                image_url = await self._wait_for_result(task_id)
                 await self._download_image(image_url, output_path)
             
             logger.info(f"Image saved: {output_path}")
@@ -49,22 +49,18 @@ class ModelScopeImageService:
     async def _create_task(self, prompt: str) -> str:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "X-DashScope-Async": "enable",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "X-ModelScope-Async-Mode": "true"
         }
         
         payload = {
             "model": self.model,
-            "input": {"prompt": prompt},
-            "parameters": {
-                "size": self.size,
-                "n": 1
-            }
+            "prompt": prompt
         }
         
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                self.base_url,
+                f"{self.base_url}/v1/images/generations",
                 headers=headers,
                 json=payload,
                 timeout=aiohttp.ClientTimeout(total=30)
@@ -74,15 +70,16 @@ class ModelScopeImageService:
                     raise Exception(f"ModelScope API error: {response.status} - {error_text}")
                 
                 data = await response.json()
-                return data["request_id"]
+                return data["task_id"]
     
-    async def _wait_for_result(self, task_id: str, max_wait: int = 300) -> dict:
+    async def _wait_for_result(self, task_id: str, max_wait: int = 300) -> str:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "X-ModelScope-Task-Type": "image_generation"
         }
         
-        url = f"https://dashscope.aliyuncs.com/api/v1/tasks/{task_id}"
+        url = f"{self.base_url}/v1/tasks/{task_id}"
         
         async with aiohttp.ClientSession() as session:
             for _ in range(max_wait):
@@ -92,18 +89,21 @@ class ModelScopeImageService:
                     timeout=aiohttp.ClientTimeout(total=30)
                 ) as response:
                     if response.status != 200:
-                        await asyncio.sleep(2)
+                        await asyncio.sleep(5)
                         continue
                     
                     data = await response.json()
-                    task_status = data.get("output", {}).get("task_status", "PENDING")
+                    task_status = data.get("task_status", "PENDING")
                     
-                    if task_status == "SUCCEEDED":
-                        return data
-                    elif task_status in ["FAILED", "CANCELLED"]:
-                        raise Exception(f"Task {task_status.lower()}: {data.get('message', 'Unknown error')}")
+                    if task_status == "SUCCEED":
+                        images = data.get("output_images", [])
+                        if images:
+                            return images[0]
+                        raise Exception("No images in response")
+                    elif task_status == "FAILED":
+                        raise Exception(f"Task failed: {data.get('message', 'Unknown error')}")
                     
-                    await asyncio.sleep(3)
+                    await asyncio.sleep(5)
             
             raise Exception("Generation timeout")
     

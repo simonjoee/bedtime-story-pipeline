@@ -26,7 +26,7 @@ class Task(BaseModel):
     steps: Dict[str, dict] = {}
     created_at: Optional[datetime] = None
     tts_provider: Optional[str] = "edge"
-    image_provider: Optional[str] = "huggingface"
+    image_provider: Optional[str] = "modelscope"
     image_style: Optional[str] = "cartoon"
     polish: bool = False
     narrator: str = "grandma"

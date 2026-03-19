@@ -2,12 +2,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
-http_proxy = os.getenv("HTTP_PROXY")
-https_proxy = os.getenv("HTTPS_PROXY")
-if http_proxy:
-    os.environ["HTTP_PROXY"] = http_proxy
-if https_proxy:
-    os.environ["HTTPS_PROXY"] = https_proxy
+import logging
+import asyncio
+import shutil
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
@@ -15,15 +12,9 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from datetime import datetime, timedelta
-import logging
-import asyncio
-import os
-import shutil
 
 from app.models import TaskStatus, Segment
 from app.task_manager import task_manager
-from app.services.image_huggingface import ImageService
-from app.services.image_leonardo import LeonardoImageService
 from app.services.image_modelscope import ModelScopeImageService
 from app.services.tts_edge import TTSService
 from app.services.tts_minimax import MiniMaxTTSService
@@ -61,8 +52,6 @@ async def home(request: Request):
 async def tasks_page(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "base_path": BASE_PATH})
 
-image_service = ImageService()
-leonardo_image_service = LeonardoImageService()
 modelscope_image_service = ModelScopeImageService()
 tts_service = TTSService()
 polish_service = PolishService()
@@ -71,7 +60,7 @@ video_service = VideoService()
 class GenerateRequest(BaseModel):
     story_text: str
     tts_provider: str = "edge"
-    image_provider: str = "huggingface"
+    image_provider: str = "modelscope"
     image_style: str = "cartoon"
     polish: bool = False
     narrator: str = "grandma"
@@ -79,7 +68,7 @@ class GenerateRequest(BaseModel):
 class LoginRequest(BaseModel):
     password: str
 
-async def process_task(task_id: str, tts_provider: str = "edge", image_provider: str = "huggingface", image_style: str = "cartoon", polish: bool = False, narrator: str = "grandma"):
+async def process_task(task_id: str, tts_provider: str = "edge", image_provider: str = "modelscope", image_style: str = "cartoon", polish: bool = False, narrator: str = "grandma"):
     task = await task_manager.get_task(task_id)
     if not task:
         return
@@ -93,12 +82,7 @@ async def process_task(task_id: str, tts_provider: str = "edge", image_provider:
     else:
         tts_svc = tts_service
     
-    if image_provider == "leonardo":
-        img_svc = leonardo_image_service
-    elif image_provider == "modelscope":
-        img_svc = modelscope_image_service
-    else:
-        img_svc = image_service
+    img_svc = modelscope_image_service
     
     task.steps = {
         "storyboard": {"status": "pending", "message": "等待中"},
@@ -205,7 +189,7 @@ async def generate_video(request: Request):
     body = await request.json()
     story_text = body.get("story_text", "").strip()
     tts_provider = body.get("tts_provider", "edge")  # "edge" or "minimax"
-    image_provider = body.get("image_provider", "huggingface")  # "huggingface" or "leonardo"
+    image_provider = body.get("image_provider", "modelscope")
     image_style = body.get("image_style", "cartoon")  # cartoon, watercolor, realistic, oil_painting, 3d, illustration
     polish = body.get("polish", False)  # 是否润色
     narrator = body.get("narrator", "grandma")  # 讲述人
@@ -503,12 +487,7 @@ async def regenerate_task(task_id: str, request: Request):
     else:
         tts_svc = tts_service
     
-    if task.image_provider == "leonardo":
-        img_svc = leonardo_image_service
-    elif task.image_provider == "modelscope":
-        img_svc = modelscope_image_service
-    else:
-        img_svc = image_service
+    img_svc = modelscope_image_service
     
     task_dir = f"static/tasks/{task_id}"
     os.makedirs(f"{task_dir}/images", exist_ok=True)

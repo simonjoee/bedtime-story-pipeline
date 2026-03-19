@@ -624,9 +624,7 @@
                         <div class="option-group">
                             <label>图像生成</label>
                             <select id="imageProvider">
-                                <option value="huggingface">HuggingFace (免费)</option>
-                                <option value="modelscope">魔搭社区/通义万相</option>
-                                <option value="leonardo">Leonardo AI</option>
+                                <option value="modelscope">魔搭社区</option>
                             </select>
                         </div>
                         <div class="option-group">
@@ -986,7 +984,7 @@
                         <div class="detail-label">工具配置</div>
                         <div class="detail-content">
                             <span class="tool-badge tts-badge">🔊 ${task.tts_provider === 'minimax' ? 'MiniMax' : 'Edge'} TTS</span>
-                            <span class="tool-badge img-badge">🖼️ ${task.image_provider === 'huggingface' ? 'HuggingFace' : task.image_provider === 'leonardo' ? 'Leonardo' : 'ModelScope'}</span>
+                            <span class="tool-badge img-badge">🖼️ 魔搭社区</span>
                         </div>
                     </div>
                     ${task.steps ? `
