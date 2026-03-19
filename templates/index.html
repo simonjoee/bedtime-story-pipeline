@@ -595,7 +595,7 @@
         </div>
         
         <header>
-            <div class="header-icon">🌙</div>
+            <div class="header-icon" id="headerIcon">🌙</div>
             <h1>口袋里的造梦机</h1>
             <div class="subtitle">把想象变成一段故事 ✨</div>
         </header>
@@ -779,6 +779,8 @@
         function updateThemeIcon(theme) {
             const btn = document.getElementById('themeToggle');
             if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+            const headerIcon = document.getElementById('headerIcon');
+            if (headerIcon) headerIcon.textContent = theme === 'dark' ? '🌙' : '✨';
         }
         
         function toggleTheme() {
