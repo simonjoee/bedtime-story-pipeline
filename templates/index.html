@@ -345,7 +345,7 @@
         .table-container {
             background: var(--bg-card);
             border-radius: 16px;
-            overflow: hidden;
+            overflow-x: auto;
             border: 1px solid var(--border);
         }
         
@@ -586,6 +586,52 @@
             .app-container { padding: 20px 16px; }
             .options-grid { grid-template-columns: 1fr; }
         }
+        
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10001;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .image-modal.active {
+            display: flex;
+        }
+        
+        .image-modal img {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        
+        .image-modal .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .image-modal .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
     </style>
 </head>
 <body>
@@ -760,6 +806,11 @@
         </div>
     </div>
     
+    <div id="imageModal" class="image-modal" onclick="closeImageModal()">
+        <button class="close-btn" onclick="closeImageModal()">×</button>
+        <img id="modalImage" src="" alt="大图预览">
+    </div>
+    
     <script>
         const basePath = "{{ base_path }}";
         let currentPage = 1;
@@ -802,6 +853,15 @@
                 toast.classList.remove('show');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
+        }
+        
+        function openImageModal(src) {
+            document.getElementById('modalImage').src = src;
+            document.getElementById('imageModal').classList.add('active');
+        }
+        
+        function closeImageModal() {
+            document.getElementById('imageModal').classList.remove('active');
         }
         
         async function checkAuth() {
@@ -1060,7 +1120,14 @@
                                 <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">图片 Prompt</div>
                                 <textarea id="sb-prompt-${idx}" rows="2" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card); color:var(--text-primary); font-size:13px; resize:vertical;">${seg.image_prompt || ''}</textarea>
                             </div>
-                            ${seg.image_path ? `<img src="${basePath}/${seg.image_path}?t=${Date.now()}" style="width:100%; max-height:160px; object-fit:contain; margin-top:12px; border-radius:8px; background:var(--bg-deep);" alt="图片">` : '<div style="height:80px; background:var(--bg-deep); border-radius:8px; margin-top:12px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;">图片未生成</div>'}
+                            ${seg.image_path ? `<img src="${basePath}/${seg.image_path}?t=${Date.now()}" style="width:100%; max-height:160px; object-fit:contain; margin-top:12px; border-radius:8px; background:var(--bg-deep); cursor:zoom-in;" alt="图片" onclick="openImageModal('${basePath}/${seg.image_path}?t=${Date.now()}')">` : '<div style="height:80px; background:var(--bg-deep); border-radius:8px; margin-top:12px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;">图片未生成</div>'}
+                            ${seg.audio_path ? `
+                            <div style="margin-top:12px; background:var(--bg-deep); border-radius:8px; padding:10px;">
+                                <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">🔊 音频预览</div>
+                                <audio controls style="width:100%; height:36px;">
+                                    <source src="${basePath}/${seg.audio_path}?t=${Date.now()}" type="audio/mpeg">
+                                </audio>
+                            </div>` : '<div style="height:40px; background:var(--bg-deep); border-radius:8px; margin-top:12px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;">🔊 音频生成中...</div>'}
                             <div style="margin-top:12px; display:flex; gap:8px;">
                                 <button id="regen-img-${idx}" onclick="regenerateOneSegment(${idx})" style="flex:1; padding:10px; background:var(--accent-emerald); color:white; border:none; border-radius:8px; cursor:pointer; font-size:12px; font-family:inherit;">🖼️ 重新生成图片</button>
                                 <button id="regen-tts-${idx}" onclick="regenerateOneTTS(${idx})" style="flex:1; padding:10px; background:var(--accent-copper, var(--accent-amber)); color:var(--bg-deep); border:none; border-radius:8px; cursor:pointer; font-size:12px; font-family:inherit;">🔊 重新生成音频</button>

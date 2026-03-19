@@ -11,7 +11,7 @@ class MiniMaxTTSService:
         self.access_token = os.getenv("MINIMAX_ACCESS_TOKEN", "")
         self.model = os.getenv("MINIMAX_MODEL", "speech-02-turbo")
         self.voice = os.getenv("MINIMAX_VOICE", "male-qn-qingse")
-        self.api_url = "https://api.minimax.io/v1/t2a_v2"
+        self.api_url = "https://api.minimaxi.com/v1/t2a_v2"
         self.timeout = 120
     
     @async_retry(max_attempts=3, base_delay=2)
@@ -42,16 +42,24 @@ class MiniMaxTTSService:
             }
             
             async with aiohttp.ClientSession() as session:
-                async with session.post(self.api_url, json=payload, headers=headers, timeout=self.timeout) as resp:
+                async with session.post(self.api_url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=self.timeout)) as resp:
                     if resp.status != 200:
                         error = await resp.text()
                         logger.error(f"MiniMax TTS error: {resp.status} - {error}")
                         raise Exception(f"MiniMax TTS error: {resp.status}")
                     
-                    audio_data = await resp.read()
+                    response_data = await resp.json()
+                    audio_hex = response_data.get("data", {}).get("audio", "")
+                    
+                    if not audio_hex:
+                        error_msg = response_data.get("base_resp", {}).get("status_msg", "No audio data")
+                        logger.error(f"MiniMax TTS error: {error_msg}")
+                        raise Exception(f"MiniMax TTS error: {error_msg}")
+                    
+                    audio_bytes = bytes.fromhex(audio_hex)
                     
                     with open(output_path, "wb") as f:
-                        f.write(audio_data)
+                        f.write(audio_bytes)
             
             logger.info(f"TTS saved: {output_path}")
             return True

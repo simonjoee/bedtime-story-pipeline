@@ -205,6 +205,70 @@
             border: 2px dashed var(--border);
         }
         
+        .audio-player {
+            margin-top: 12px;
+            background: var(--bg-surface);
+            border-radius: 10px;
+            padding: 8px;
+            border: 1px solid var(--border);
+        }
+        
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .image-modal.active {
+            display: flex;
+        }
+        
+        .image-modal img {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        
+        .image-modal .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .image-modal .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        audio {
+            width: 100%;
+            height: 36px;
+            border-radius: 8px;
+        }
+        
+        audio::-webkit-media-controls-panel {
+            background: var(--bg-card);
+        }
+        
         .segment-actions {
             display: flex;
             gap: 10px;
@@ -355,6 +419,11 @@
             <div class="loading">加载中...</div>
         </div>
     </div>
+    
+    <div id="imageModal" class="image-modal" onclick="closeImageModal()">
+        <button class="close-btn" onclick="closeImageModal()">×</button>
+        <img id="modalImage" src="" alt="大图预览">
+    </div>
 
     <script>
         const taskId = '{{ task_id }}';
@@ -384,6 +453,10 @@
         document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
         initTheme();
         
+        let pollingInterval = null;
+        let lastImagePaths = {};
+        let lastAudioPaths = {};
+        
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
@@ -396,19 +469,48 @@
             }, 3000);
         }
         
+        function openImageModal(src) {
+            document.getElementById('modalImage').src = src;
+            document.getElementById('imageModal').classList.add('active');
+        }
+        
+        function closeImageModal() {
+            document.getElementById('imageModal').classList.remove('active');
+        }
+        
         async function loadStoryboard() {
             const res = await fetch(`${basePath}/api/storyboard/${taskId}`);
             const data = await res.json();
             
             if (data.error) {
                 document.getElementById('app').innerHTML = `<div class="status">错误: ${data.error.message}</div>`;
+                stopPolling();
                 return;
             }
             
-            renderStoryboard(data);
+            renderStoryboard(data, true);
+            
+            if (data.status === 'processing') {
+                startPolling();
+            } else {
+                stopPolling();
+            }
         }
         
-        function renderStoryboard(data) {
+        function startPolling() {
+            if (!pollingInterval) {
+                pollingInterval = setInterval(loadStoryboard, 3000);
+            }
+        }
+        
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
+        
+        function renderStoryboard(data, isUpdate = false) {
             const app = document.getElementById('app');
             
             if (!data.segments || data.segments.length === 0) {
@@ -418,6 +520,12 @@
             
             let html = '';
             data.segments.forEach((seg, idx) => {
+                const hasNewImage = lastImagePaths[idx] !== seg.image_path;
+                const hasNewAudio = lastAudioPaths[idx] !== seg.audio_path;
+                
+                if (hasNewImage) lastImagePaths[idx] = seg.image_path;
+                if (hasNewAudio) lastAudioPaths[idx] = seg.audio_path;
+                
                 html += `
                     <div class="segment" style="animation-delay: ${idx * 0.1}s">
                         <div class="segment-header">
@@ -432,8 +540,17 @@
                             <textarea id="prompt-${idx}" rows="2">${seg.image_prompt || ''}</textarea>
                         </div>
                         ${seg.image_path 
-                            ? `<img src="${basePath}/${seg.image_path}?t=${Date.now()}" class="segment-image" alt="生成图片">` 
-                            : '<div class="image-placeholder">🖼️ 图片未生成</div>'}
+                            ? `<img src="${basePath}/${seg.image_path}?t=${Date.now()}" class="segment-image" alt="生成图片" onclick="openImageModal('${basePath}/${seg.image_path}?t=${Date.now()}')" style="cursor:zoom-in;">` 
+                            : '<div class="image-placeholder">🖼️ 图片生成中...</div>'}
+                        ${seg.audio_path 
+                            ? `<div class="audio-wrap" style="margin-top: 12px; background: var(--bg-surface); border-radius: 10px; padding: 12px; border: 1px solid var(--border);">
+                                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">🔊 音频预览</div>
+                                <audio controls style="width: 100%; height: 40px;">
+                                    <source src="${basePath}/${seg.audio_path}?t=${Date.now()}" type="audio/mpeg">
+                                    您的浏览器不支持音频播放
+                                </audio>
+                               </div>` 
+                            : '<div class="image-placeholder" style="margin-top: 12px;">🔊 音频生成中...</div>'}
                         <div class="segment-actions">
                             <button id="regen-img-${idx}" class="btn btn-regen-img" onclick="regenerateOneSegment(${idx})">🖼️ 重新生成图片</button>
                             <button id="regen-tts-${idx}" class="btn btn-regen-tts" onclick="regenerateOneTTS(${idx})">🔊 重新生成音频</button>
@@ -558,6 +675,31 @@
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = '🔊 重新生成音频';
+            }
+        }
+        
+        async function saveStoryboard() {
+            const segments = [];
+            const segmentCount = document.querySelectorAll('.segment').length;
+            
+            for (let i = 0; i < segmentCount; i++) {
+                segments.push({
+                    text: document.getElementById(`text-${i}`).value,
+                    image_prompt: document.getElementById(`prompt-${i}`).value
+                });
+            }
+            
+            const res = await fetch(`${basePath}/api/storyboard/${taskId}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({segments})
+            });
+            
+            const data = await res.json();
+            if (data.status === 'ok') {
+                showToast('保存成功！', 'success');
+            } else {
+                showToast('保存失败: ' + (data.error?.message || '未知错误'), 'error');
             }
         }
         

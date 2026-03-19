@@ -138,6 +138,16 @@ async def process_task(task_id: str, tts_provider: str = "edge", image_provider:
                 if i < len(segments):
                     segments[i].audio_path = path
             
+            if len(audio_paths) < len(segments):
+                error_msg = "音频生成失败"
+                task.steps["tts"] = {"status": "failed", "message": f"成功 {len(audio_paths)}/{len(segments)} 个片段"}
+                task.status = TaskStatus.FAILED
+                task.error = {"code": "TTS_ERROR", "message": error_msg}
+                await task_manager.update_task(task)
+                return
+            
+            task.steps["tts"] = {"status": "completed", "message": f"完成 {len(audio_paths)} 个片段"}
+            
             if len(image_paths) < len(segments):
                 error_msg = "图片生成失败"
                 task.steps["image"] = {"status": "failed", "message": f"成功 {len(image_paths)}/{len(segments)} 张"}
@@ -146,7 +156,6 @@ async def process_task(task_id: str, tts_provider: str = "edge", image_provider:
                 await task_manager.update_task(task)
                 return
             
-            task.steps["tts"] = {"status": "completed", "message": f"完成 {len(audio_paths)} 个片段"}
             task.steps["image"] = {"status": "completed", "message": f"完成 {len(image_paths)} 个片段"}
             task.progress = 60
             await task_manager.update_task(task)
