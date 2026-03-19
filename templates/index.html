@@ -5,196 +5,1240 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>故事生成器</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; }
+        :root {
+            --bg-deep: #0d0d12;
+            --bg-surface: #16161d;
+            --bg-card: #1e1e28;
+            --border: rgba(255, 255, 255, 0.06);
+            --accent-violet: #8b7cf6;
+            --accent-rose: #f472b6;
+            --accent-emerald: #34d399;
+            --accent-amber: #fbbf24;
+            --text-primary: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+        }
+        
+        [data-theme="light"] {
+            --bg-deep: #f5f5f7;
+            --bg-surface: #ffffff;
+            --bg-card: #ffffff;
+            --border: rgba(0, 0, 0, 0.08);
+            --accent-violet: #7c6dd4;
+            --accent-rose: #e05a9e;
+            --accent-emerald: #22c55e;
+            --accent-amber: #d97706;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+        }
+        
+        * { box-sizing: border-box; outline: none; }
+        
         body {
-            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Noto Sans SC', 'DM Sans', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            margin: 0;
             min-height: 100vh;
+            transition: background 0.3s ease, color 0.3s ease;
         }
-        .container {
-            background: white;
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        
+        .header-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 16px;
         }
-        h1 {
+        
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .theme-toggle:hover {
+            border-color: var(--accent-violet);
+            transform: rotate(15deg);
+        }
+        
+        .app-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+        
+        header {
             text-align: center;
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 28px;
+            margin-bottom: 40px;
+            animation: fadeIn 0.6s ease;
         }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .header-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            filter: drop-shadow(0 0 20px rgba(139, 124, 246, 0.4));
+        }
+        
+        h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0 0 6px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-violet) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        .tabs {
+            display: flex;
+            background: var(--bg-surface);
+            padding: 6px;
+            border-radius: 16px;
+            margin-bottom: 32px;
+            border: 1px solid var(--border);
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .tab-btn.active {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .tab-btn:hover:not(.active) {
+            color: var(--text-primary);
+        }
+        
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; animation: fadeIn 0.4s ease; }
+        
+        .card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 28px;
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+        
+        .card-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 20px;
+        }
+        
         textarea {
             width: 100%;
-            height: 200px;
-            padding: 15px;
+            height: 160px;
+            padding: 18px;
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            font-size: 15px;
+            font-family: inherit;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+            resize: none;
             margin-bottom: 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            resize: vertical;
-            transition: border-color 0.3s;
         }
+        
         textarea:focus {
-            outline: none;
-            border-color: #667eea;
+            border-color: var(--accent-violet);
+            box-shadow: 0 0 0 4px rgba(139, 124, 246, 0.15);
         }
-        .button-container {
-            text-align: center;
+        
+        textarea::placeholder {
+            color: var(--text-muted);
         }
-        button {
-            padding: 12px 40px;
-            font-size: 18px;
+        
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        
+        .option-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            background: var(--bg-surface);
+            color: var(--text-primary);
             cursor: pointer;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        
+        select:focus {
+            border-color: var(--accent-violet);
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            background: var(--bg-surface);
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--accent-violet);
+        }
+        
+        .checkbox-group span {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .btn-primary {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, var(--accent-violet) 0%, var(--accent-rose) 100%);
             color: white;
             border: none;
-            border-radius: 25px;
-            transition: transform 0.2s, box-shadow 0.2s;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
-        button:hover:not(:disabled) {
+        
+        .btn-primary:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 12px 32px rgba(139, 124, 246, 0.35);
         }
-        button:disabled {
+        
+        .btn-primary:disabled {
             opacity: 0.6;
             cursor: not-allowed;
+            transform: none;
         }
+        
         #progress {
-            margin-top: 30px;
+            margin-top: 24px;
             display: none;
         }
-        .progress-info {
+        
+        .progress-header {
             display: flex;
             justify-content: space-between;
             margin-bottom: 10px;
-            color: #666;
+            font-size: 14px;
         }
-        progress {
-            width: 100%;
-            height: 12px;
-            border-radius: 6px;
+        
+        .progress-track {
+            background: var(--bg-surface);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
         }
-        progress::-webkit-progress-bar {
-            background-color: #e0e0e0;
-            border-radius: 6px;
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-violet), var(--accent-rose));
+            border-radius: 4px;
+            transition: width 0.5s ease;
         }
-        progress::-webkit-progress-value {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 6px;
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
         }
-        #result {
-            margin-top: 30px;
+        
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 20px;
             text-align: center;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
         }
-        video {
-            max-width: 100%;
-            border-radius: 8px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-violet);
         }
-        .download-btn {
-            display: inline-block;
-            margin-top: 15px;
-            padding: 10px 30px;
-            background: #4CAF50;
-            color: white;
-            text-decoration: none;
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            font-family: 'DM Sans', sans-serif;
+            background: linear-gradient(135deg, var(--accent-violet) 0%, var(--accent-rose) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+        
+        .table-container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: var(--bg-surface);
+            padding: 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        td {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            font-size: 14px;
+        }
+        
+        tr:hover td {
+            background: rgba(139, 124, 246, 0.03);
+        }
+        
+        .badge {
+            padding: 6px 12px;
             border-radius: 20px;
-            transition: background 0.3s;
-        }
-        .download-btn:hover {
-            background: #45a049;
-        }
-        .error {
-            background: #ffebee;
-            color: #c62828;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            border-left: 4px solid #c62828;
-        }
-        .loading {
+            font-size: 12px;
+            font-weight: 600;
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 10px;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        
+        .badge.processing { background: rgba(251, 191, 36, 0.15); color: var(--accent-amber); }
+        .badge.completed { background: rgba(52, 211, 153, 0.15); color: var(--accent-emerald); }
+        .badge.failed { background: rgba(244, 114, 182, 0.15); color: var(--accent-rose); }
+        .badge.cancelled { background: rgba(113, 113, 122, 0.15); color: var(--text-muted); }
+        
+        .mini-progress {
+            width: 80px;
+            height: 6px;
+            background: var(--bg-surface);
+            border-radius: 3px;
+            overflow: hidden;
         }
-        @media (max-width: 600px) {
-            body { padding: 10px; }
-            .container { padding: 20px; }
-            h1 { font-size: 22px; }
-            textarea { height: 150px; }
+        
+        .mini-progress-fill {
+            height: 100%;
+            background: var(--accent-emerald);
+            border-radius: 3px;
+        }
+        
+        .btn-sm {
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            margin-right: 6px;
+        }
+        
+        .btn-view { background: rgba(139, 124, 246, 0.15); color: var(--accent-violet); }
+        .btn-view:hover { background: var(--accent-violet); color: white; }
+        
+        .btn-danger { background: rgba(244, 114, 182, 0.15); color: var(--accent-rose); }
+        .btn-danger:hover { background: var(--accent-rose); color: white; }
+        
+        .empty-state {
+            padding: 60px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 16px;
+            gap: 8px;
+        }
+        
+        .page-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            border-radius: 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        
+        .page-btn:hover:not(:disabled) {
+            border-color: var(--accent-violet);
+            color: var(--accent-violet);
+        }
+        
+        .page-btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        
+        .modal-overlay.active { display: flex; }
+        
+        .modal-card {
+            background: var(--bg-card);
+            width: 100%;
+            max-width: 560px;
+            max-height: 90vh;
+            border-radius: 20px;
+            padding: 28px;
+            border: 1px solid var(--border);
+            animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow-y: auto;
+        }
+        
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .close-modal {
+            background: var(--bg-surface);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .close-modal:hover {
+            background: var(--accent-rose);
+            color: white;
+        }
+        
+        .detail-item {
+            margin-bottom: 16px;
+        }
+        
+        .detail-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+        
+        .detail-content {
+            font-size: 14px;
+            color: var(--text-secondary);
+            background: var(--bg-surface);
+            padding: 12px;
+            border-radius: 10px;
+            line-height: 1.6;
+        }
+        
+        video {
+            width: 100%;
+            border-radius: 12px;
+            margin-top: 12px;
+        }
+        
+        .toast {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 14px 24px;
+            border-radius: 12px;
+            z-index: 10000;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            font-size: 14px;
+        }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .toast.success { border-color: var(--accent-emerald); }
+        .toast.error { border-color: var(--accent-rose); }
+        
+        .tool-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            margin-right: 6px;
+            font-weight: 500;
+        }
+        
+        .tts-badge { background: rgba(139, 124, 246, 0.15); color: var(--accent-violet); }
+        .img-badge { background: rgba(244, 114, 182, 0.15); color: var(--accent-rose); }
+        
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .app-container { padding: 20px 16px; }
+            .options-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>故事生成器 ✨</h1>
-        
-        <div class="nav" style="margin-bottom: 20px; text-align: center;">
-            <a href="{{ base_path }}/generate" style="display:inline-block;padding:8px 20px;margin:0 10px;background:#667eea;color:white;text-decoration:none;border-radius:20px;">生成视频</a>
-            <a href="{{ base_path }}/tasks" style="display:inline-block;padding:8px 20px;margin:0 10px;text-decoration:none;color:#667eea;border:2px solid #667eea;border-radius:20px;">任务列表</a>
+    <div class="app-container">
+        <div class="header-row">
+            <button class="theme-toggle" id="themeToggle" title="切换主题">🌙</button>
         </div>
         
-        <textarea id="story" placeholder="在这里输入你的故事...
-
-例如：
-从前有座山，山上有座庙，庙里有个老和尚在讲故事。"></textarea>
-        <div class="button-container">
-            <button id="generate" onclick="generateVideo()">生成视频</button>
+        <header>
+            <div class="header-icon">🌙</div>
+            <h1>口袋里的造梦机</h1>
+            <div class="subtitle">把想象变成一段故事 ✨</div>
+        </header>
+        
+        <div class="tabs">
+            <button class="tab-btn" onclick="showTab('generate')" id="nav-generate">✨ 生成故事</button>
+            <button class="tab-btn active" onclick="showTab('tasks')" id="nav-tasks">📋 历史任务</button>
         </div>
-        <div id="progress">
-            <div class="progress-info">
-                <span>状态: <span id="status">等待中</span></span>
-                <span id="progressText">0%</span>
+        
+        <div class="content-area">
+            <div id="tab-generate" class="tab-pane">
+                <div class="card">
+                    <div class="card-title">故事内容</div>
+                    <textarea id="story" placeholder="请输入故事内容... 
+                    
+例如：一只勇敢的小兔子在魔法森林里寻找丢失的星星..."></textarea>
+                    
+                    <div class="options-grid">
+                        <div class="option-group">
+                            <label>语音合成</label>
+                            <select id="ttsProvider">
+                                <option value="edge">Edge TTS (免费)</option>
+                                <option value="minimax">MiniMax TTS</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label>图像生成</label>
+                            <select id="imageProvider">
+                                <option value="huggingface">HuggingFace (免费)</option>
+                                <option value="modelscope">魔搭社区/通义万相</option>
+                                <option value="leonardo">Leonardo AI</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label>图像风格</label>
+                            <select id="imageStyle">
+                                <option value="cartoon">卡通/动漫</option>
+                                <option value="3d">3D动画</option>
+                                <option value="illustration">插画</option>
+                                <option value="watercolor">水彩画</option>
+                                <option value="oil_painting">油画</option>
+                                <option value="realistic">写实</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label>叙述者</label>
+                            <select id="narrator">
+                                <option value="grandma">慈祥奶奶</option>
+                                <option value="grandpa">和蔼爷爷</option>
+                                <option value="mom">温柔妈妈</option>
+                                <option value="sister">活泼姐姐</option>
+                                <option value="brother">调皮哥哥</option>
+                                <option value="teacher">温柔老师</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="options-grid" style="grid-template-columns: 1fr;">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="polishToggle">
+                            <span>润色故事（使语言更口语化，适合儿童）</span>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-primary" id="generateBtn" onclick="generateVideo()">
+                        <span>🎬 开始生成视频</span>
+                    </button>
+                    
+                    <div id="progress">
+                        <div class="progress-header">
+                            <span id="status">正在处理</span>
+                            <span id="progressText">0%</span>
+                        </div>
+                        <div class="progress-track">
+                            <div id="progressBar" class="progress-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="result" style="margin-top: 24px;"></div>
+                </div>
             </div>
-            <progress id="progressBar" value="0" max="100"></progress>
+            
+            <div id="tab-tasks" class="tab-pane active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalCount">-</div>
+                        <div class="stat-label">总任务</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="processingCount">-</div>
+                        <div class="stat-label">处理中</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="completedCount">-</div>
+                        <div class="stat-label">已完成</div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>任务ID</th>
+                                <th>时间</th>
+                                <th>状态</th>
+                                <th>进度</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="taskList">
+                            <tr><td colspan="6" class="empty-state">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="pagination">
+                    <button class="page-btn" id="prevPage" onclick="changePage(-1)">上一页</button>
+                    <span id="pageInfo" style="color: var(--text-muted); font-size: 13px;">1 / 1</span>
+                    <button class="page-btn" id="nextPage" onclick="changePage(1)">下一页</button>
+                    <button class="page-btn" onclick="loadTasks()">🔄</button>
+                </div>
+            </div>
         </div>
-        <div id="result"></div>
     </div>
+    
+    <div id="detailModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">任务详情</div>
+                <div style="display: flex; gap: 8px">
+                    <button class="close-modal" onclick="refreshDetail()" title="刷新">↻</button>
+                    <button class="close-modal" onclick="closeModal()">&times;</button>
+                </div>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+    
+    <div id="deleteModal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 380px">
+            <div class="modal-header">
+                <div class="modal-title">确认删除</div>
+                <button class="close-modal" onclick="closeDeleteModal()">&times;</button>
+            </div>
+            <div style="text-align: center; padding: 24px;">
+                <div style="font-size: 48px; margin-bottom: 16px">🗑️</div>
+                <p style="color: var(--text-secondary); font-size: 15px; margin: 0 0 8px">确定要删除这个任务吗？</p>
+                <p style="color: var(--text-muted); font-size: 13px;">此操作无法撤销</p>
+                <div style="margin-top: 24px; display: flex; gap: 12px; justify-content: center">
+                    <button class="btn-sm btn-view" onclick="closeDeleteModal()" style="padding: 12px 24px;">取消</button>
+                    <button class="btn-sm btn-danger" onclick="confirmDelete()" style="padding: 12px 24px; background: var(--accent-rose); color: white;">删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="storyboardModal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 680px">
+            <div class="modal-header">
+                <div class="modal-title">📝 故事板</div>
+                <button class="close-modal" onclick="closeStoryboardModal()">&times;</button>
+            </div>
+            <div id="storyboardBody" style="max-height: calc(90vh - 120px); overflow-y: auto;"></div>
+        </div>
+    </div>
+    
     <script>
         const basePath = "{{ base_path }}";
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentDetailTaskId = null;
         
-        function showError(message) {
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = `<div class="error">${message}</div>`;
+        function initTheme() {
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+            updateThemeIcon(theme);
         }
         
-        function showVideo(videoUrl) {
-            const fullUrl = videoUrl.startsWith('http') ? videoUrl : basePath + videoUrl;
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = `
-                <video controls src="${fullUrl}"></video>
-                <br>
-                <a href="${fullUrl}" class="download-btn" download>下载视频</a>
-            `;
+        function updateThemeIcon(theme) {
+            const btn = document.getElementById('themeToggle');
+            if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
         }
         
-        function updateProgress(status, progress) {
-            document.getElementById('status').textContent = status;
-            document.getElementById('progressBar').value = progress;
-            document.getElementById('progressText').textContent = progress + '%';
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon(next);
         }
+        
+        document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
+        initTheme();
+        
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.add('show'));
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        async function checkAuth() {
+            try {
+                const resp = await fetch(basePath + '/api/check-auth');
+                if (resp.status === 401) {
+                    window.location.href = basePath + '/login';
+                    return false;
+                }
+                return true;
+            } catch (e) {
+                window.location.href = basePath + '/login';
+                return false;
+            }
+        }
+        
+        async function init() {
+            if (!await checkAuth()) return;
+            loadTasks();
+            setInterval(loadTasks, 10000);
+            resetBtn();
+        }
+        
+        function showTab(tab) {
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            document.getElementById('nav-' + tab).classList.add('active');
+            if (tab === 'tasks') loadTasks();
+        }
+        
+        const statusMap = {
+            'processing': { text: '处理中', class: 'processing' },
+            'completed': { text: '已完成', class: 'completed' },
+            'failed': { text: '失败', class: 'failed' },
+            'cancelled': { text: '已取消', class: 'cancelled' }
+        };
+        
+        const stepNames = {
+            'storyboard': '故事板',
+            'split_text': '文本分段',
+            'tts': '音频生成',
+            'image': '图像生成',
+            'video': '视频合成'
+        };
+        
+        function renderSteps(steps) {
+            if (!steps || Object.keys(steps).length === 0) {
+                return '<div style="color:var(--text-muted)">暂无步骤信息</div>';
+            }
+            let html = '<div style="display:flex; flex-direction:column; gap:8px">';
+            for (const [key, step] of Object.entries(steps)) {
+                const name = stepNames[key] || key;
+                const statusIcon = step.status === 'completed' ? '✓' : 
+                                   step.status === 'processing' ? '⏳' : 
+                                   step.status === 'failed' ? '✗' : '○';
+                const statusClass = step.status === 'completed' ? 'var(--accent-emerald)' : 
+                                   step.status === 'processing' ? 'var(--accent-amber)' : 
+                                   step.status === 'failed' ? 'var(--accent-rose)' : 'var(--text-muted)';
+                html += `<div style="display:flex; align-items:center; gap:8px; padding:4px 0">
+                    <span style="color:${statusClass}; font-size:16px">${statusIcon}</span>
+                    <span style="flex:1">${name}</span>
+                    <span style="color:var(--text-muted); font-size:12px">${step.message || step.status}</span>
+                </div>`;
+            }
+            html += '</div>';
+            return html;
+        }
+        
+        async function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                loadTasks();
+            }
+        }
+        
+        async function loadTasks() {
+            try {
+                const resp = await fetch(basePath + '/api/tasks?page=' + currentPage + '&page_size=10');
+                const data = await resp.json();
+                
+                document.getElementById('totalCount').textContent = data.count;
+                document.getElementById('processingCount').textContent = data.processing_count;
+                document.getElementById('completedCount').textContent = data.completed_count || 0;
+                
+                totalPages = data.total_pages || 1;
+                document.getElementById('pageInfo').textContent = `${data.page} / ${totalPages}`;
+                document.getElementById('prevPage').disabled = currentPage <= 1;
+                document.getElementById('nextPage').disabled = currentPage >= totalPages;
+                
+                const tbody = document.getElementById('taskList');
+                
+                if (data.tasks.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">暂无任务</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = data.tasks.map(task => {
+                    const statusInfo = statusMap[task.status] || { text: task.status, class: '' };
+                    
+                    let ytBtn = '';
+                    if (task.video_url && !task.youtube_url && task.status === 'completed') {
+                        ytBtn = `<button class="btn-sm btn-view" onclick="uploadToYouTube('${task.task_id}')">上传YT</button>`;
+                    } else if (task.youtube_url) {
+                        ytBtn = `<a href="${task.youtube_url}" target="_blank" class="btn-sm btn-view" style="text-decoration:none;">YT</a>`;
+                    }
+                    
+                    const cancelBtn = task.status === 'processing'
+                        ? `<button class="btn-sm btn-danger" onclick="cancelTask('${task.task_id}')">取消</button>`
+                        : `<button class="btn-sm btn-danger" onclick="deleteTask('${task.task_id}')">删除</button>`;
+                    
+                    const createdTime = task.created_at ? new Date(task.created_at).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
+                    
+                    return `
+                        <tr onclick="showDetail('${task.task_id}')" style="cursor:pointer">
+                            <td style="font-family: monospace; color: var(--text-muted); font-size: 12px;">${task.task_id.substring(0, 8)}</td>
+                            <td style="color: var(--text-secondary)">${createdTime}</td>
+                            <td><span class="badge ${statusInfo.class}">${statusInfo.text}</span></td>
+                            <td>
+                                <div style="display:flex; align-items:center; gap:10px">
+                                    <div class="mini-progress">
+                                        <div class="mini-progress-fill" style="width: ${task.progress}%"></div>
+                                    </div>
+                                    <span style="font-size:12px; color:var(--text-muted)">${task.progress}%</span>
+                                </div>
+                            </td>
+                            <td onclick="event.stopPropagation()">
+                                <button class="btn-sm btn-view" onclick="showDetail('${task.task_id}')">详情</button>
+                                <button class="btn-sm btn-view" onclick="showStoryboard('${task.task_id}')">故事板</button>
+                                ${cancelBtn}
+                                ${ytBtn}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+                
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        async function showDetail(taskId) {
+            currentDetailTaskId = taskId;
+            try {
+                const resp = await fetch(basePath + '/api/task/' + taskId);
+                const task = await resp.json();
+                
+                if (task.error && !task.task_id) {
+                    alert('获取详情失败');
+                    return;
+                }
+                
+                const statusInfo = statusMap[task.status] || { text: task.status, class: '' };
+                const modalBody = document.getElementById('modalBody');
+                
+                modalBody.innerHTML = `
+                    <div class="detail-item">
+                        <div class="detail-label">任务 ID</div>
+                        <div style="display:flex; align-items:center; gap:8px">
+                            <input type="text" value="${task.task_id}" readonly style="flex:1; padding:10px; border:1px solid var(--border); border-radius:8px; font-family:monospace; font-size:11px; background:var(--bg-surface); color:var(--text-secondary);">
+                            <button class="close-modal" onclick="navigator.clipboard.writeText('${task.task_id}')" title="复制">📋</button>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:16px; margin-bottom:16px">
+                        <div class="detail-item" style="flex:1">
+                            <div class="detail-label">状态</div>
+                            <span class="badge ${statusInfo.class}">${statusInfo.text}</span>
+                        </div>
+                        <div class="detail-item" style="flex:1">
+                            <div class="detail-label">进度</div>
+                            <div class="detail-content">${task.progress}%</div>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">创建时间</div>
+                        <div class="detail-content">${task.created_at ? new Date(task.created_at).toLocaleString() : '-'}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">工具配置</div>
+                        <div class="detail-content">
+                            <span class="tool-badge tts-badge">🔊 ${task.tts_provider === 'minimax' ? 'MiniMax' : 'Edge'} TTS</span>
+                            <span class="tool-badge img-badge">🖼️ ${task.image_provider === 'huggingface' ? 'HuggingFace' : task.image_provider === 'leonardo' ? 'Leonardo' : 'ModelScope'}</span>
+                        </div>
+                    </div>
+                    ${task.steps ? `
+                    <div class="detail-item">
+                        <div class="detail-label">处理步骤</div>
+                        <div class="detail-content">
+                            ${renderSteps(task.steps)}
+                        </div>
+                    </div>
+                    ` : ''}
+                    <div class="detail-item">
+                        <div class="detail-label">故事内容</div>
+                        <div class="detail-content" style="max-height:120px; overflow-y:auto;">${task.story_text || '-'}</div>
+                    </div>
+                    ${task.video_url ? `
+                    <div class="detail-item">
+                        <div class="detail-label">生成视频</div>
+                        <video controls src="${basePath}${task.video_url}"></video>
+                        <div style="margin-top:12px; text-align:right">
+                            <a href="${basePath}${task.video_url}" download class="btn-sm btn-view" style="text-decoration:none; padding: 10px 20px;">⬇ 下载</a>
+                        </div>
+                    </div>
+                    ` : ''}
+                    ${task.error ? `
+                    <div class="detail-item">
+                        <div class="detail-label">错误信息</div>
+                        <div class="detail-content" style="background:rgba(244,114,182,0.1); color:var(--accent-rose)">${task.error.message}</div>
+                    </div>
+                    ` : ''}
+                `;
+                
+                document.getElementById('detailModal').classList.add('active');
+            } catch (e) {
+                alert('网络错误: ' + e.message);
+            }
+        }
+        
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('active');
+        }
+        
+        let currentStoryboardTaskId = null;
+        
+        async function showStoryboard(taskId) {
+            currentStoryboardTaskId = taskId;
+            document.getElementById('storyboardBody').innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted)">加载中...</div>';
+            document.getElementById('storyboardModal').classList.add('active');
+            
+            try {
+                const resp = await fetch(basePath + '/api/storyboard/' + taskId);
+                const data = await resp.json();
+                
+                if (data.error) {
+                    document.getElementById('storyboardBody').innerHTML = '<div style="text-align:center; padding:40px; color:var(--accent-rose)">' + data.error.message + '</div>';
+                    return;
+                }
+                
+                if (!data.segments || data.segments.length === 0) {
+                    document.getElementById('storyboardBody').innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-muted)">暂无故事板数据</div>';
+                    return;
+                }
+                
+                let html = '';
+                data.segments.forEach((seg, idx) => {
+                    html += `
+                        <div style="background:var(--bg-surface); border-radius:12px; padding:16px; margin-bottom:16px;">
+                            <div style="font-weight:600; margin-bottom:12px; color:var(--accent-violet)">片段 ${idx + 1}</div>
+                            <div style="margin-bottom:12px">
+                                <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">故事文本</div>
+                                <textarea id="sb-text-${idx}" rows="2" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card); color:var(--text-primary); font-size:13px; resize:vertical;">${seg.text || ''}</textarea>
+                            </div>
+                            <div>
+                                <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">图片 Prompt</div>
+                                <textarea id="sb-prompt-${idx}" rows="2" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card); color:var(--text-primary); font-size:13px; resize:vertical;">${seg.image_prompt || ''}</textarea>
+                            </div>
+                            ${seg.image_path ? `<img src="${basePath}/${seg.image_path}?t=${Date.now()}" style="width:100%; max-height:160px; object-fit:contain; margin-top:12px; border-radius:8px; background:var(--bg-deep);" alt="图片">` : '<div style="height:80px; background:var(--bg-deep); border-radius:8px; margin-top:12px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;">图片未生成</div>'}
+                            <div style="margin-top:12px; display:flex; gap:8px;">
+                                <button id="regen-img-${idx}" onclick="regenerateOneSegment(${idx})" style="flex:1; padding:10px; background:var(--accent-emerald); color:white; border:none; border-radius:8px; cursor:pointer; font-size:12px; font-family:inherit;">🖼️ 重新生成图片</button>
+                                <button id="regen-tts-${idx}" onclick="regenerateOneTTS(${idx})" style="flex:1; padding:10px; background:var(--accent-copper, var(--accent-amber)); color:var(--bg-deep); border:none; border-radius:8px; cursor:pointer; font-size:12px; font-family:inherit;">🔊 重新生成音频</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                    <div style="display:flex; gap:12px;">
+                        <button onclick="closeStoryboardModal()" style="flex:1; padding:14px; background:var(--bg-surface); color:var(--text-secondary); border:none; border-radius:10px; cursor:pointer; font-size:14px; font-family:inherit;">关闭</button>
+                        <button onclick="regenerateStoryboard()" style="flex:2; padding:14px; background:linear-gradient(135deg, var(--accent-emerald), #10b981); color:white; border:none; border-radius:10px; cursor:pointer; font-size:14px; font-weight:600; font-family:inherit;">🎬 重新合成视频</button>
+                    </div>
+                `;
+                
+                document.getElementById('storyboardBody').innerHTML = html;
+                
+            } catch (e) {
+                document.getElementById('storyboardBody').innerHTML = '<div style="text-align:center; padding:40px; color:var(--accent-rose)">网络错误: ' + e.message + '</div>';
+            }
+        }
+        
+        async function saveStoryboard() {
+            if (!currentStoryboardTaskId) return;
+            
+            const segments = [];
+            const segmentCount = document.querySelectorAll('[id^="sb-text-"]').length;
+            
+            for (let i = 0; i < segmentCount; i++) {
+                segments.push({
+                    text: document.getElementById('sb-text-' + i).value,
+                    image_prompt: document.getElementById('sb-prompt-' + i).value
+                });
+            }
+            
+            try {
+                const resp = await fetch(basePath + '/api/storyboard/' + currentStoryboardTaskId, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({segments})
+                });
+                const data = await resp.json();
+                
+                if (data.status === 'ok') {
+                    showToast('保存成功！', 'success');
+                } else {
+                    showToast('保存失败', 'error');
+                }
+            } catch (e) {
+                showToast('网络错误: ' + e.message, 'error');
+            }
+        }
+        
+        async function regenerateStoryboard() {
+            if (!currentStoryboardTaskId) return;
+            if (!confirm('重新生成将覆盖当前视频，确定要继续吗？')) return;
+            
+            try {
+                const resp = await fetch(basePath + '/api/regenerate/' + currentStoryboardTaskId, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({indices: []})
+                });
+                const data = await resp.json();
+                
+                if (data.video_url) {
+                    showToast('视频生成完成！', 'success');
+                    closeStoryboardModal();
+                    loadTasks();
+                } else {
+                    showToast('视频生成失败', 'error');
+                }
+            } catch (e) {
+                showToast('网络错误: ' + e.message, 'error');
+            }
+        }
+        
+        async function regenerateOneSegment(idx) {
+            if (!currentStoryboardTaskId) return;
+            
+            const btn = document.getElementById('regen-img-' + idx);
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '生成中...';
+            }
+            
+            try {
+                const resp = await fetch(basePath + '/api/regenerate/' + currentStoryboardTaskId, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({indices: [idx]})
+                });
+                const data = await resp.json();
+                
+                if (resp.ok) {
+                    showToast('片段 ' + (idx + 1) + ' 图片生成完成！', 'success');
+                    showStoryboard(currentStoryboardTaskId);
+                } else {
+                    showToast('生成失败: ' + (data.error?.message || '未知错误'), 'error');
+                }
+            } catch (e) {
+                showToast('网络错误: ' + e.message, 'error');
+            }
+            
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '🖼️ 重新生成图片';
+            }
+        }
+        
+        async function regenerateOneTTS(idx) {
+            if (!currentStoryboardTaskId) return;
+            
+            const btn = document.getElementById('regen-tts-' + idx);
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '生成中...';
+            }
+            
+            try {
+                const resp = await fetch(basePath + '/api/regenerate-tts/' + currentStoryboardTaskId, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({indices: [idx]})
+                });
+                const data = await resp.json();
+                
+                if (resp.ok) {
+                    showToast('片段 ' + (idx + 1) + ' 音频生成完成！', 'success');
+                } else {
+                    showToast('生成失败: ' + (data.error?.message || '未知错误'), 'error');
+                }
+            } catch (e) {
+                showToast('网络错误: ' + e.message, 'error');
+            }
+            
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '🔊 重新生成音频';
+            }
+        }
+        
+        function closeStoryboardModal() {
+            document.getElementById('storyboardModal').classList.remove('active');
+            currentStoryboardTaskId = null;
+        }
+        
+        document.getElementById('storyboardModal').addEventListener('click', function(e) {
+            if (e.target === this) closeStoryboardModal();
+        });
+        
+        function refreshDetail() {
+            if (currentDetailTaskId) {
+                showDetail(currentDetailTaskId);
+            }
+        }
+        
+        document.getElementById('detailModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
         
         async function generateVideo() {
             const story = document.getElementById('story').value;
             if (!story.trim()) {
-                showError('请输入故事内容');
+                showToast('请输入故事内容', 'error');
                 return;
             }
             
-            document.getElementById('generate').disabled = true;
+            const ttsProvider = document.getElementById('ttsProvider').value;
+            const imageProvider = document.getElementById('imageProvider').value;
+            const imageStyle = document.getElementById('imageStyle').value;
+            const polish = document.getElementById('polishToggle').checked;
+            const narrator = document.getElementById('narrator').value;
+            
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ 提交中...</span>';
+            
             document.getElementById('progress').style.display = 'block';
             document.getElementById('result').innerHTML = '';
             updateProgress('提交任务中...', 0);
@@ -203,63 +1247,99 @@
                 const resp = await fetch(basePath + '/api/generate', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({story_text: story})
+                    body: JSON.stringify({
+                        story_text: story, 
+                        tts_provider: ttsProvider,
+                        image_provider: imageProvider,
+                        image_style: imageStyle,
+                        polish: polish,
+                        narrator: narrator
+                    })
                 });
                 const data = await resp.json();
                 
                 if (data.error) {
-                    showError('错误: ' + data.error.message);
-                    document.getElementById('generate').disabled = false;
+                    document.getElementById('result').innerHTML = `<div style="padding:16px; background:rgba(244,114,182,0.1); color:var(--accent-rose); border-radius:10px; text-align:center">${data.error.message}</div>`;
+                    resetBtn();
                     return;
                 }
                 
-                pollStatus(data.task_id);
+                window.location.href = basePath + '/tasks';
             } catch (e) {
-                showError('网络错误: ' + e.message);
-                document.getElementById('generate').disabled = false;
+                document.getElementById('result').innerHTML = `<div style="padding:16px; background:rgba(244,114,182,0.1); color:var(--accent-rose); border-radius:10px; text-align:center">网络错误: ${e.message}</div>`;
+                resetBtn();
             }
         }
         
-        async function pollStatus(taskId) {
-            const statusMap = {
-                'processing': '处理中...',
-                'completed': '已完成',
-                'failed': '失败',
-                'cancelled': '已取消'
-            };
-            
-            while (true) {
-                try {
-                    const resp = await fetch(basePath + '/api/task/' + taskId);
-                    const data = await resp.json();
-                    
-                    if (data.error) {
-                        showError('错误: ' + data.error.message);
-                        break;
-                    }
-                    
-                    updateProgress(statusMap[data.status] || data.status, data.progress);
-                    
-                    if (data.status === 'completed') {
-                        showVideo(basePath + data.video_url);
-                        break;
-                    }
-                    if (data.status === 'failed') {
-                        showError('生成失败: ' + (data.error?.message || '未知错误'));
-                        break;
-                    }
-                    if (data.status === 'cancelled') {
-                        showError('任务已取消');
-                        break;
-                    }
-                    await new Promise(r => setTimeout(r, 2000));
-                } catch (e) {
-                    showError('网络错误: ' + e.message);
-                    break;
-                }
-            }
-            document.getElementById('generate').disabled = false;
+        function updateProgress(status, progress) {
+            document.getElementById('status').textContent = status;
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('progressText').textContent = progress + '%';
         }
+        
+        function showError(message) {
+            document.getElementById('result').innerHTML = `<div style="padding:16px; background:rgba(244,114,182,0.1); color:var(--accent-rose); border-radius:10px; text-align:center">${message}</div>`;
+        }
+        
+        function resetBtn() {
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = false;
+            btn.innerHTML = '<span>🎬 开始生成视频</span>';
+        }
+        
+        async function uploadToYouTube(taskId) {
+            if (!confirm('确定要上传到 YouTube 吗？')) return;
+            
+            try {
+                const resp = await fetch(basePath + '/api/upload-youtube/' + taskId, { method: 'POST' });
+                const data = await resp.json();
+                
+                if (data.error) {
+                    showToast('上传失败: ' + data.error.message, 'error');
+                } else {
+                    showToast('上传成功！', 'success');
+                    loadTasks();
+                }
+            } catch (e) {
+                showToast('网络错误: ' + e.message, 'error');
+            }
+        }
+        
+        async function cancelTask(taskId) {
+            if (!confirm('确定要取消这个任务吗？')) return;
+            try {
+                const resp = await fetch(basePath + '/api/task/' + taskId, { method: 'DELETE' });
+                const data = await resp.json();
+                if (!data.error) loadTasks();
+            } catch (e) {
+                showToast('网络错误: ' + e.message, 'error');
+            }
+        }
+        
+        async function deleteTask(taskId) {
+            window.deleteTargetTaskId = taskId;
+            document.getElementById('deleteModal').style.display = 'flex';
+        }
+        
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+            window.deleteTargetTaskId = null;
+        }
+        
+        async function confirmDelete() {
+            const taskId = window.deleteTargetTaskId;
+            if (!taskId) return;
+            closeDeleteModal();
+            try {
+                const resp = await fetch(basePath + '/api/task/' + taskId + '/delete', { method: 'DELETE' });
+                const data = await resp.json();
+                if (!data.error) loadTasks();
+            } catch (e) {
+                showToast('网络错误: ' + e.message, 'error');
+            }
+        }
+        
+        init();
     </script>
 </body>
 </html>

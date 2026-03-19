@@ -4,61 +4,353 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>故事板 - 睡前故事生成器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-deep: #0d0d12;
+            --bg-surface: #16161d;
+            --bg-card: #1e1e28;
+            --border: rgba(255, 255, 255, 0.06);
+            --accent-violet: #8b7cf6;
+            --accent-rose: #f472b6;
+            --accent-emerald: #34d399;
+            --accent-amber: #fbbf24;
+            --text-primary: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+        }
+        
+        [data-theme="light"] {
+            --bg-deep: #f5f5f7;
+            --bg-surface: #ffffff;
+            --bg-card: #ffffff;
+            --border: rgba(0, 0, 0, 0.08);
+            --accent-violet: #7c6dd4;
+            --accent-rose: #e05a9e;
+            --accent-emerald: #22c55e;
+            --accent-amber: #d97706;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+        }
+        
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 12px; }
-        .container { max-width: 100%; margin: 0 auto; }
-        h1 { text-align: center; margin-bottom: 16px; color: #333; font-size: 20px; }
-        .segment { background: white; border-radius: 8px; padding: 12px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .segment-image { width: 100%; max-height: 200px; object-fit: contain; border-radius: 4px; margin-top: 8px; background: #f0f0f0; }
-        .image-placeholder { width: 100%; height: 120px; background: #f0f0f0; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 12px; margin-top: 8px; }
-        .segment-actions { display: flex; gap: 8px; margin-top: 12px; }
-        .btn-regen-img { background: #00b894; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; flex: 1; font-size: 12px; }
-        .btn-regen-tts { background: #e17055; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; flex: 1; font-size: 12px; }
-        .segment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .segment-number { font-weight: bold; color: #666; font-size: 14px; }
-        .field { margin-bottom: 8px; }
-        .field label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
-        .field textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; resize: vertical; min-height: 60px; }
-        .btn { padding: 12px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; flex: 1; }
-        .btn-primary { background: #4CAF50; color: white; }
-        .btn-primary:hover { background: #45a049; }
-        .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
-        .btn-secondary { background: #2196F3; color: white; }
-        .btn-secondary:hover { background: #1976D2; }
-        .btn-back { background: #666; color: white; }
-        .actions { display: flex; gap: 8px; justify-content: center; margin-top: 16px; position: sticky; bottom: 12px; }
-        .status { text-align: center; padding: 20px; color: #666; }
-        .loading { text-align: center; padding: 40px; }
+        
+        body {
+            font-family: 'Noto Sans SC', 'DM Sans', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px 16px;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+        
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+        }
+        
+        .header-row {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 16px;
+        }
+        
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .theme-toggle:hover {
+            border-color: var(--accent-violet);
+            transform: rotate(15deg);
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 32px;
+            animation: fadeIn 0.6s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .header-icon {
+            font-size: 40px;
+            margin-bottom: 8px;
+        }
+        
+        h1 {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-violet) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: var(--text-muted);
+        }
+        
+        .segment {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+            animation: slideUp 0.4s ease;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .segment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .segment-number {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--accent-violet);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .segment-number::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--accent-violet);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent-violet);
+        }
+        
+        .field {
+            margin-bottom: 14px;
+        }
+        
+        .field label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        
+        .field textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+        
+        .field textarea:focus {
+            outline: none;
+            border-color: var(--accent-violet);
+            box-shadow: 0 0 0 3px rgba(139, 124, 246, 0.15);
+        }
+        
+        .segment-image {
+            width: 100%;
+            max-height: 180px;
+            object-fit: contain;
+            border-radius: 10px;
+            margin-top: 12px;
+            background: var(--bg-surface);
+        }
+        
+        .image-placeholder {
+            width: 100%;
+            height: 120px;
+            background: var(--bg-surface);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-top: 12px;
+            border: 2px dashed var(--border);
+        }
+        
+        .segment-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-regen-img {
+            background: rgba(52, 211, 153, 0.15);
+            color: var(--accent-emerald);
+        }
+        
+        .btn-regen-img:hover:not(:disabled) {
+            background: var(--accent-emerald);
+            color: white;
+        }
+        
+        .btn-regen-tts {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--accent-amber);
+        }
+        
+        .btn-regen-tts:hover:not(:disabled) {
+            background: var(--accent-amber);
+            color: white;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            position: sticky;
+            bottom: 24px;
+        }
+        
+        .btn-back {
+            flex: 1;
+            padding: 16px;
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-back:hover {
+            border-color: var(--text-muted);
+            color: var(--text-primary);
+        }
+        
+        .btn-primary {
+            flex: 2;
+            padding: 16px;
+            background: linear-gradient(135deg, var(--accent-violet) 0%, var(--accent-rose) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(139, 124, 246, 0.35);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+        
         .toast {
             position: fixed;
-            top: 20px;
+            top: 24px;
             left: 50%;
-            transform: translateX(-50%);
-            background: #333;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
+            transform: translateX(-50%) translateY(-100px);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 14px 24px;
+            border-radius: 12px;
             z-index: 1000;
-            animation: fadeIn 0.3s ease;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            font-size: 14px;
         }
-        .toast.success { background: #4CAF50; }
-        .toast.error { background: #f44336; }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
-            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
         }
+        
+        .toast.success { border-color: var(--accent-emerald); }
+        .toast.error { border-color: var(--accent-rose); }
+        
         @media (min-width: 768px) {
-            .container { max-width: 600px; }
-            h1 { margin-bottom: 20px; font-size: 24px; }
-            .segment { padding: 16px; margin-bottom: 16px; }
-            .actions { gap: 12px; margin-top: 20px; }
+            .container { padding: 0; }
+            body { padding: 40px 20px; }
+            .segment { padding: 24px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📝 故事板</h1>
+        <div class="header-row">
+            <button class="theme-toggle" id="themeToggle" title="切换主题">🌙</button>
+        </div>
+        
+        <header>
+            <div class="header-icon">📝</div>
+            <h1>故事板</h1>
+        </header>
         <div id="app">
             <div class="loading">加载中...</div>
         </div>
@@ -68,12 +360,40 @@
         const taskId = '{{ task_id }}';
         const basePath = '{{ base_path }}';
         
+        function initTheme() {
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+            updateThemeIcon(theme);
+        }
+        
+        function updateThemeIcon(theme) {
+            const btn = document.getElementById('themeToggle');
+            if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+        
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon(next);
+        }
+        
+        document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
+        initTheme();
+        
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.textContent = message;
             document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+            requestAnimationFrame(() => toast.classList.add('show'));
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
         
         async function loadStoryboard() {
@@ -99,7 +419,7 @@
             let html = '';
             data.segments.forEach((seg, idx) => {
                 html += `
-                    <div class="segment">
+                    <div class="segment" style="animation-delay: ${idx * 0.1}s">
                         <div class="segment-header">
                             <span class="segment-number">片段 ${idx + 1}</span>
                         </div>
@@ -111,12 +431,12 @@
                             <label>图片 Prompt</label>
                             <textarea id="prompt-${idx}" rows="2">${seg.image_prompt || ''}</textarea>
                         </div>
-                        <div style="margin-top:8px;">
-                            ${seg.image_path ? `<img src="${basePath}/${seg.image_path}?t=${Date.now()}" class="segment-image" alt="生成图片">` : '<div class="image-placeholder">图片未生成</div>'}
-                        </div>
+                        ${seg.image_path 
+                            ? `<img src="${basePath}/${seg.image_path}?t=${Date.now()}" class="segment-image" alt="生成图片">` 
+                            : '<div class="image-placeholder">🖼️ 图片未生成</div>'}
                         <div class="segment-actions">
-                            <button id="regen-img-${idx}" class="btn-regen-img" onclick="regenerateOneSegment(${idx})">重新生成图片</button>
-                            <button id="regen-tts-${idx}" class="btn-regen-tts" onclick="regenerateOneTTS(${idx})">重新生成音频</button>
+                            <button id="regen-img-${idx}" class="btn btn-regen-img" onclick="regenerateOneSegment(${idx})">🖼️ 重新生成图片</button>
+                            <button id="regen-tts-${idx}" class="btn btn-regen-tts" onclick="regenerateOneTTS(${idx})">🔊 重新生成音频</button>
                         </div>
                     </div>
                 `;
@@ -124,8 +444,8 @@
             
             html += `
                 <div class="actions">
-                    <button class="btn btn-back" onclick="window.location.href='/'">返回</button>
-                    <button class="btn btn-primary" onclick="regenerate()">重新合成视频</button>
+                    <button class="btn-back" onclick="window.location.href='/'">← 返回</button>
+                    <button class="btn-primary" id="regenAllBtn" onclick="regenerate()">🎬 重新合成视频</button>
                 </div>
             `;
             
@@ -151,16 +471,16 @@
             
             const data = await res.json();
             if (data.status === 'ok') {
-                alert('保存成功！');
+                showToast('保存成功！', 'success');
             } else {
-                alert('保存失败: ' + (data.error?.message || '未知错误'));
+                showToast('保存失败: ' + (data.error?.message || '未知错误'), 'error');
             }
         }
         
         async function regenerate() {
-            const btn = document.querySelector('.btn-primary');
+            const btn = document.getElementById('regenAllBtn');
             btn.disabled = true;
-            btn.textContent = '生成中...';
+            btn.textContent = '⏳ 生成中...';
             
             const res = await fetch(`${basePath}/api/regenerate/${taskId}`, {
                 method: 'POST',
@@ -170,26 +490,22 @@
             
             const data = await res.json();
             if (data.video_url) {
-                alert('重新生成完成！');
-                window.location.href = '/';
+                showToast('重新生成完成！', 'success');
+                setTimeout(() => window.location.href = '/', 1500);
             } else {
-                alert('重新生成失败');
+                showToast('重新生成失败', 'error');
             }
             
             btn.disabled = false;
-            btn.textContent = '重新合成视频';
+            btn.textContent = '🎬 重新合成视频';
         }
         
         async function regenerateOneSegment(idx) {
             const btn = document.getElementById('regen-img-' + idx);
             if (btn) {
                 btn.disabled = true;
-                btn.textContent = '生成中...';
+                btn.textContent = '⏳ 生成中...';
             }
-            
-            // 显示加载中的图片占位符
-            const imgEl = document.querySelector(`img[onclick*="regenerateOneSegment(${idx})"]`) || 
-                          document.querySelector(`#regen-img-${idx}`)?.closest('.segment')?.querySelector('img');
             
             try {
                 const resp = await fetch(`${basePath}/api/regenerate/${taskId}`, {
@@ -211,7 +527,7 @@
             
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = '重新生成图片';
+                btn.textContent = '🖼️ 重新生成图片';
             }
         }
         
@@ -219,7 +535,7 @@
             const btn = document.getElementById('regen-tts-' + idx);
             if (btn) {
                 btn.disabled = true;
-                btn.textContent = '生成中...';
+                btn.textContent = '⏳ 生成中...';
             }
             
             try {
@@ -241,7 +557,7 @@
             
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = '重新生成音频';
+                btn.textContent = '🔊 重新生成音频';
             }
         }
         

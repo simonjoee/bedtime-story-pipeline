@@ -55,11 +55,11 @@ async def login_page(request: Request):
 
 @app.get(f"{BASE_PATH}/")
 async def home(request: Request):
-    return templates.TemplateResponse("tasks.html", {"request": request, "base_path": BASE_PATH})
+    return templates.TemplateResponse("index.html", {"request": request, "base_path": BASE_PATH})
 
 @app.get(f"{BASE_PATH}/tasks")
 async def tasks_page(request: Request):
-    return templates.TemplateResponse("tasks.html", {"request": request, "base_path": BASE_PATH})
+    return templates.TemplateResponse("index.html", {"request": request, "base_path": BASE_PATH})
 
 image_service = ImageService()
 leonardo_image_service = LeonardoImageService()

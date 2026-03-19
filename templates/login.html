@@ -4,127 +4,293 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录 - 故事生成器</title>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #6c5ce7;
-            --secondary: #a29bfe;
-            --bg: #f8f9fa;
-            --text: #2d3436;
-            --card: #ffffff;
-            --error: #ff7675;
+            --bg-warm: #1c1915;
+            --bg-card: #262119;
+            --wood-dark: #3d2f1f;
+            --wood-medium: #5c4433;
+            --accent-gold: #d4a853;
+            --accent-copper: #c77d4a;
+            --text-light: #f5efe6;
+            --text-muted: #a89b8a;
+            --glow: rgba(212, 168, 83, 0.25);
+        }
+        
+        [data-theme="light"] {
+            --bg-warm: #f5efe6;
+            --bg-card: #ffffff;
+            --wood-dark: #d4c4b0;
+            --wood-medium: #c9b89a;
+            --accent-gold: #b8943d;
+            --accent-copper: #a66d3d;
+            --text-light: #2d2a26;
+            --text-muted: #8a807a;
+            --glow: rgba(184, 148, 61, 0.2);
         }
         
         * { box-sizing: border-box; outline: none; }
         
         body {
-            font-family: 'Nunito', "Microsoft YaHei", sans-serif;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-warm);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             margin: 0;
             padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: background 0.3s ease;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(ellipse at 20% 80%, rgba(94, 66, 41, 0.3) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(61, 47, 31, 0.4) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(92, 68, 51, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        [data-theme="light"] body::before {
+            background: 
+                radial-gradient(ellipse at 20% 80%, rgba(212, 196, 176, 0.5) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(201, 184, 154, 0.4) 0%, transparent 50%);
+        }
+        
+        .wood-grain {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+            pointer-events: none;
+        }
+        
+        .header-row {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        
+        .theme-toggle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: 2px solid rgba(212, 168, 83, 0.2);
+            background: var(--bg-card);
+            color: var(--accent-gold);
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .theme-toggle:hover {
+            transform: rotate(15deg);
+            border-color: var(--accent-gold);
         }
         
         .login-card {
-            background: var(--card);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            position: relative;
+            background: var(--bg-card);
+            padding: 48px 40px;
+            border-radius: 24px;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             text-align: center;
+            border: 1px solid rgba(212, 168, 83, 0.1);
+            animation: slideUp 0.6s ease-out;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
         }
         
-        .logo {
-            font-size: 48px;
-            margin-bottom: 10px;
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .book-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            filter: drop-shadow(0 4px 12px var(--glow));
         }
         
         h1 {
-            color: var(--text);
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--text-light);
             margin: 0 0 8px;
-            font-size: 24px;
+            letter-spacing: 2px;
         }
         
         .subtitle {
-            color: #636e72;
-            margin-bottom: 30px;
+            color: var(--text-muted);
+            margin-bottom: 40px;
             font-size: 14px;
         }
         
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
         
         input[type="password"], input[type="text"] {
             width: 100%;
-            padding: 14px 20px;
-            border: 2px solid #dfe6e9;
-            border-radius: 12px;
+            padding: 18px 24px;
+            border: 2px solid var(--wood-dark);
+            border-radius: 14px;
             font-size: 16px;
-            transition: border-color 0.3s;
+            font-family: inherit;
+            background: rgba(0, 0, 0, 0.15);
+            color: var(--text-light);
             text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        [data-theme="light"] input[type="password"], 
+        [data-theme="light"] input[type="text"] {
+            background: rgba(0, 0, 0, 0.05);
         }
         
         input:focus {
-            border-color: var(--primary);
+            border-color: var(--accent-gold);
+            box-shadow: 0 0 0 4px var(--glow);
+        }
+        
+        input::placeholder {
+            color: var(--text-muted);
         }
         
         .login-btn {
             width: 100%;
-            background: var(--primary);
-            color: white;
+            background: linear-gradient(135deg, var(--accent-gold) 0%, var(--accent-copper) 100%);
+            color: var(--bg-warm);
             border: none;
-            padding: 14px;
-            border-radius: 12px;
+            padding: 18px;
+            border-radius: 14px;
             font-size: 16px;
             font-weight: 600;
+            font-family: inherit;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
         }
         
         .login-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(108, 92, 231, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px var(--glow);
         }
         
         .login-btn:disabled {
             opacity: 0.7;
             cursor: not-allowed;
+            transform: none;
         }
         
         .error-msg {
-            color: var(--error);
-            margin-top: 15px;
+            color: #e88a6f;
+            margin-top: 20px;
             font-size: 14px;
             display: none;
+            padding: 12px 16px;
+            background: rgba(232, 138, 111, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(232, 138, 111, 0.2);
+        }
+        
+        [data-theme="light"] .error-msg {
+            color: #dc2626;
         }
         
         .error-msg.show {
             display: block;
+            animation: shake 0.4s ease;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        
+        .hint {
+            margin-top: 32px;
+            color: var(--text-muted);
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        
+        @media (max-width: 480px) {
+            .login-card {
+                padding: 36px 24px;
+            }
+            h1 { font-size: 26px; }
         }
     </style>
 </head>
 <body>
+    <div class="wood-grain"></div>
+    <div class="header-row">
+        <button class="theme-toggle" id="themeToggle" title="切换主题">🌙</button>
+    </div>
+    
     <div class="login-card">
-        <div class="logo">✨</div>
+        <div class="book-icon">📚</div>
         <h1>故事生成器</h1>
-        <div class="subtitle">请输入密码登录</div>
+        <div class="subtitle">请输入密码进入</div>
         
         <div class="input-group">
-            <input type="password" id="password" placeholder="请输入密码" onkeypress="handleEnter(event)">
+            <input type="password" id="password" placeholder="输入密码" onkeypress="handleEnter(event)">
         </div>
         
         <button class="login-btn" id="loginBtn" onclick="doLogin()">登 录</button>
         
         <div class="error-msg" id="errorMsg"></div>
+        
+        <div class="hint">输入管理员密码以继续</div>
     </div>
     
     <script>
         const basePath = "{{ base_path }}";
+        
+        function initTheme() {
+            const saved = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const theme = saved || (prefersDark ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', theme);
+            updateThemeIcon(theme);
+        }
+        
+        function updateThemeIcon(theme) {
+            document.getElementById('themeToggle').textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+        
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon(next);
+        }
+        
+        document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+        initTheme();
         
         function handleEnter(e) {
             if (e.key === 'Enter') {
@@ -141,7 +307,7 @@
             
             const btn = document.getElementById('loginBtn');
             btn.disabled = true;
-            btn.textContent = '登录中...';
+            btn.textContent = '验证中...';
             
             try {
                 const resp = await fetch(basePath + '/api/login', {
