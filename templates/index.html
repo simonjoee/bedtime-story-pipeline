@@ -365,28 +365,130 @@
             letter-spacing: 1px;
         }
         
-        td {
-            padding: 16px;
-            border-top: 1px solid var(--border);
-            font-size: 14px;
+        /* 移动端卡片布局 - 仅在小屏幕生效 */
+        @media (max-width: 600px) {
+            #taskTable {
+                display: none !important;
+            }
+            
+            #taskListMobile {
+                display: block !important;
+            }
+            
+            .task-list-mobile {
+                padding: 12px 16px;
+            }
+            
+            .task-list-mobile .task-card {
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: 16px;
+                margin-bottom: 14px;
+                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+                overflow: hidden;
+            }
+            
+            .mobile-card-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px;
+            }
+            
+            .mobile-card-info {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            
+            .mobile-card-id {
+                font-family: monospace;
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text-primary);
+            }
+            
+            .mobile-card-time {
+                font-size: 12px;
+                color: var(--text-muted);
+            }
+            
+            .mobile-card-body {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0 16px 16px 16px;
+            }
+            
+            .mobile-card-body .mini-progress {
+                width: 100px;
+            }
+            
+            .mobile-card-actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                padding: 12px 16px;
+                border-top: 1px solid var(--border);
+                background: rgba(0, 0, 0, 0.05);
+            }
+            
+            .mobile-card-actions .btn-sm {
+                flex: 1;
+                text-align: center;
+                min-width: 60px;
+            }
         }
         
-        tr:hover td {
-            background: rgba(139, 124, 246, 0.03);
+        /* 桌面端保持原有表格样式 */
+        @media (min-width: 601px) {
+            #taskListMobile {
+                display: none !important;
+            }
+            
+            #taskTable {
+                display: table;
+            }
+            
+            td {
+                padding: 16px;
+                border-top: 1px solid var(--border);
+                font-size: 14px;
+            }
+            
+            tr:hover td {
+                background: rgba(139, 124, 246, 0.03);
+            }
+        }
         }
         
         .badge {
-            padding: 6px 12px;
+            padding: 6px 14px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
             display: inline-block;
         }
         
-        .badge.processing { background: rgba(251, 191, 36, 0.15); color: var(--accent-amber); }
-        .badge.completed { background: rgba(52, 211, 153, 0.15); color: var(--accent-emerald); }
-        .badge.failed { background: rgba(244, 114, 182, 0.15); color: var(--accent-rose); }
-        .badge.cancelled { background: rgba(113, 113, 122, 0.15); color: var(--text-muted); }
+        .badge.processing { 
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--accent-amber);
+        }
+        
+        .badge.completed { 
+            background: rgba(52, 211, 153, 0.15);
+            color: var(--accent-emerald);
+        }
+        
+        .badge.failed { 
+            background: rgba(244, 114, 182, 0.15);
+            color: var(--accent-rose);
+        }
+        
+        .badge.cancelled { 
+            background: rgba(113, 113, 122, 0.15);
+            color: var(--text-muted);
+        }
         
         .mini-progress {
             width: 80px;
@@ -394,6 +496,45 @@
             background: var(--bg-surface);
             border-radius: 3px;
             overflow: hidden;
+        }
+        
+        .mini-progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            background: var(--accent-violet);
+        }
+        
+        /* 按钮样式 */
+        .btn-sm {
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            margin-right: 8px;
+        }
+        
+        .btn-view { 
+            background: rgba(139, 124, 246, 0.15);
+            color: var(--accent-violet);
+        }
+        
+        .btn-view:hover { 
+            background: var(--accent-violet);
+            color: white;
+        }
+        
+        .btn-danger { 
+            background: rgba(244, 114, 182, 0.15);
+            color: var(--accent-rose);
+        }
+        
+        .btn-danger:hover { 
+            background: var(--accent-rose);
+            color: white;
         }
         
         .mini-progress-fill {
@@ -738,7 +879,7 @@
                 </div>
                 
                 <div class="table-container">
-                    <table>
+                    <table id="taskTable">
                         <thead>
                             <tr>
                                 <th>任务ID</th>
@@ -752,6 +893,7 @@
                             <tr><td colspan="6" class="empty-state">加载中...</td></tr>
                         </tbody>
                     </table>
+                    <div id="taskListMobile" class="task-list-mobile" style="display:none;"></div>
                 </div>
                 
                 <div class="pagination">
@@ -953,50 +1095,110 @@
                 document.getElementById('nextPage').disabled = currentPage >= totalPages;
                 
                 const tbody = document.getElementById('taskList');
+                const taskTable = document.getElementById('taskTable');
+                const taskListMobile = document.getElementById('taskListMobile');
+                const isMobile = window.innerWidth <= 600;
                 
                 if (data.tasks.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">暂无任务</td></tr>';
+                    if (isMobile) {
+                        taskTable.style.display = 'none';
+                        taskListMobile.style.display = 'block';
+                        taskListMobile.innerHTML = '<div class="task-card" style="text-align:center;padding:40px;cursor:default;"><div style="font-size:48px;margin-bottom:12px">📭</div><div style="color:var(--text-muted)">暂无任务</div></div>';
+                    } else {
+                        taskTable.style.display = 'table';
+                        taskListMobile.style.display = 'none';
+                        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">暂无任务</td></tr>';
+                    }
                     return;
                 }
                 
-                tbody.innerHTML = data.tasks.map(task => {
-                    const statusInfo = statusMap[task.status] || { text: task.status, class: '' };
-                    
-                    let ytBtn = '';
-                    if (task.video_url && !task.youtube_url && task.status === 'completed') {
-                        ytBtn = `<button class="btn-sm btn-view" onclick="uploadToYouTube('${task.task_id}')">上传YT</button>`;
-                    } else if (task.youtube_url) {
-                        ytBtn = `<a href="${task.youtube_url}" target="_blank" class="btn-sm btn-view" style="text-decoration:none;">YT</a>`;
-                    }
-                    
-                    const cancelBtn = task.status === 'processing'
-                        ? `<button class="btn-sm btn-danger" onclick="cancelTask('${task.task_id}')">取消</button>`
-                        : `<button class="btn-sm btn-danger" onclick="deleteTask('${task.task_id}')">删除</button>`;
-                    
-                    const createdTime = task.created_at ? new Date(task.created_at).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
-                    
-                    return `
-                        <tr onclick="showDetail('${task.task_id}')" style="cursor:pointer">
-                            <td style="font-family: monospace; color: var(--text-muted); font-size: 12px;">${task.task_id.substring(0, 8)}</td>
-                            <td style="color: var(--text-secondary)">${createdTime}</td>
-                            <td><span class="badge ${statusInfo.class}">${statusInfo.text}</span></td>
-                            <td>
-                                <div style="display:flex; align-items:center; gap:10px">
+                if (isMobile) {
+                    taskTable.style.display = 'none';
+                    taskListMobile.style.display = 'block';
+                    taskListMobile.innerHTML = data.tasks.map(task => {
+                        const statusInfo = statusMap[task.status] || { text: task.status, class: '' };
+                        
+                        let ytBtn = '';
+                        if (task.video_url && !task.youtube_url && task.status === 'completed') {
+                            ytBtn = `<button class="btn-sm btn-view" onclick="uploadToYouTube('${task.task_id}')">上传YT</button>`;
+                        } else if (task.youtube_url) {
+                            ytBtn = `<a href="${task.youtube_url}" target="_blank" class="btn-sm btn-view" style="text-decoration:none;">YT</a>`;
+                        }
+                        
+                        const cancelBtn = task.status === 'processing'
+                            ? `<button class="btn-sm btn-danger" onclick="cancelTask('${task.task_id}')">取消</button>`
+                            : `<button class="btn-sm btn-danger" onclick="deleteTask('${task.task_id}')">删除</button>`;
+                        
+                        const createdTime = task.created_at ? new Date(task.created_at).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
+                        
+                        return `
+                            <div class="task-card" onclick="showDetail('${task.task_id}')">
+                                <div class="mobile-card-header">
+                                    <div class="mobile-card-info">
+                                        <span class="mobile-card-id">${task.task_id.substring(0, 8)}</span>
+                                        <span class="mobile-card-time">${createdTime}</span>
+                                    </div>
+                                    <span class="badge ${statusInfo.class}">${statusInfo.text}</span>
+                                </div>
+                                <div class="mobile-card-body">
+                                    <span style="font-size:12px; color:var(--text-muted)">${task.progress}%</span>
                                     <div class="mini-progress">
                                         <div class="mini-progress-fill" style="width: ${task.progress}%"></div>
                                     </div>
-                                    <span style="font-size:12px; color:var(--text-muted)">${task.progress}%</span>
                                 </div>
-                            </td>
-                            <td onclick="event.stopPropagation()">
-                                <button class="btn-sm btn-view" onclick="showDetail('${task.task_id}')">详情</button>
-                                <button class="btn-sm btn-view" onclick="showStoryboard('${task.task_id}')">故事板</button>
-                                ${cancelBtn}
-                                ${ytBtn}
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
+                                <div class="mobile-card-actions" onclick="event.stopPropagation()">
+                                    <button class="btn-sm btn-view" onclick="showDetail('${task.task_id}')">详情</button>
+                                    <button class="btn-sm btn-view" onclick="showStoryboard('${task.task_id}')">故事板</button>
+                                    ${cancelBtn}
+                                    ${ytBtn}
+                                </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    taskTable.style.display = 'table';
+                    taskListMobile.style.display = 'none';
+                    tbody.innerHTML = data.tasks.map(task => {
+                        const statusInfo = statusMap[task.status] || { text: task.status, class: '' };
+                        
+                        let ytBtn = '';
+                        if (task.video_url && !task.youtube_url && task.status === 'completed') {
+                            ytBtn = `<button class="btn-sm btn-view" onclick="uploadToYouTube('${task.task_id}')">上传YT</button>`;
+                        } else if (task.youtube_url) {
+                            ytBtn = `<a href="${task.youtube_url}" target="_blank" class="btn-sm btn-view" style="text-decoration:none;">YT</a>`;
+                        }
+                        
+                        const cancelBtn = task.status === 'processing'
+                            ? `<button class="btn-sm btn-danger" onclick="cancelTask('${task.task_id}')">取消</button>`
+                            : `<button class="btn-sm btn-danger" onclick="deleteTask('${task.task_id}')">删除</button>`;
+                        
+                        const createdTime = task.created_at ? new Date(task.created_at).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
+                        
+                        return `
+                            <tr onclick="showDetail('${task.task_id}')" style="cursor:pointer">
+                                <td style="font-family: monospace; color: var(--text-muted); font-size: 12px;">${task.task_id.substring(0, 8)}</td>
+                                <td style="color: var(--text-secondary)">${createdTime}</td>
+                                <td><span class="badge ${statusInfo.class}">${statusInfo.text}</span></td>
+                                <td>
+                                    <div style="display:flex; align-items:center; gap:10px">
+                                        <div class="mini-progress">
+                                            <div class="mini-progress-fill" style="width: ${task.progress}%"></div>
+                                        </div>
+                                        <span style="font-size:12px; color:var(--text-muted)">${task.progress}%</span>
+                                    </div>
+                                </td>
+                                <td onclick="event.stopPropagation()">
+                                    <button class="btn-sm btn-view" onclick="showDetail('${task.task_id}')">详情</button>
+                                    <button class="btn-sm btn-view" onclick="showStoryboard('${task.task_id}')">故事板</button>
+                                    ${cancelBtn}
+                                    ${ytBtn}
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                }
                 
             } catch (e) {
                 console.error(e);
@@ -1062,8 +1264,9 @@
                     <div class="detail-item">
                         <div class="detail-label">生成视频</div>
                         <video controls src="${basePath}${task.video_url}"></video>
-                        <div style="margin-top:12px; text-align:right">
-                            <a href="${basePath}${task.video_url}" download class="btn-sm btn-view" style="text-decoration:none; padding: 10px 20px;">⬇ 下载</a>
+                        <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end">
+                            <button class="btn-sm" onclick="closeModal()" style="background:rgba(255,255,255,0.1); color:var(--text-secondary);">关闭</button>
+                            <a href="${basePath}${task.video_url}" download class="btn-sm btn-view" style="text-decoration:none;">⬇ 下载</a>
                         </div>
                     </div>
                     ` : ''}
