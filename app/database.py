@@ -4,10 +4,11 @@ import json
 from datetime import datetime
 from typing import Optional, Dict
 
-DB_PATH = "data/tasks.db"
+DATA_DIR = os.getenv("DATA_DIR", "data")
+DB_PATH = f"{DATA_DIR}/tasks.db"
 
 async def init_db():
-    os.makedirs("data", exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS tasks (

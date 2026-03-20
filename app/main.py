@@ -34,8 +34,9 @@ app = FastAPI(title="Bedtime Story Pipeline")
 app.add_middleware(AuthMiddleware)
 
 BASE_PATH = os.getenv("BASE_PATH", "")
+DATA_DIR = os.getenv("DATA_DIR", "data")
 
-app.mount(f"{BASE_PATH}/static", StaticFiles(directory="static"), name="static")
+app.mount(f"{BASE_PATH}/static", StaticFiles(directory=DATA_DIR), name="static")
 templates = Jinja2Templates(directory="templates")
 
 @app.get(f"{BASE_PATH}/login")
@@ -91,12 +92,12 @@ async def process_task(task_id: str, tts_provider: str = "minimax", image_provid
         raw_segments = [s.strip() for s in task.story_text.replace('\n', '。').split('。') if s.strip()]
         task.segments = [Segment(text=t, image_prompt=t) for t in raw_segments]
         
-        task_dir = f"static/tasks/{task_id}"
+        task_dir = f"{DATA_DIR}/tasks/{task_id}"
         os.makedirs(f"{task_dir}/images", exist_ok=True)
         os.makedirs(f"{task_dir}/audio", exist_ok=True)
-        os.makedirs("static/videos", exist_ok=True)
+        os.makedirs(f"{DATA_DIR}/videos", exist_ok=True)
         
-        video_path = f"static/videos/{task_id}.mp4"
+        video_path = f"{DATA_DIR}/videos/{task_id}.mp4"
         with open(video_path, 'wb') as f:
             f.write(b'DEMO_VIDEO')
         
@@ -110,6 +111,7 @@ async def process_task(task_id: str, tts_provider: str = "minimax", image_provid
         task.status = TaskStatus.COMPLETED
         task.video_url = f"/static/videos/{task_id}.mp4"
         await task_manager.update_task(task)
+        await task_manager.complete_task(task_id)
         return
     
     try:
@@ -130,7 +132,7 @@ async def process_task(task_id: str, tts_provider: str = "minimax", image_provid
             task.progress = 10
             await task_manager.update_task(task)
             
-            task_dir = f"static/tasks/{task_id}"
+            task_dir = f"{DATA_DIR}/tasks/{task_id}"
             os.makedirs(f"{task_dir}/images", exist_ok=True)
             os.makedirs(f"{task_dir}/audio", exist_ok=True)
             
@@ -187,7 +189,7 @@ async def process_task(task_id: str, tts_provider: str = "minimax", image_provid
             task.steps["video"] = {"status": "processing", "message": "正在合成视频..."}
             await task_manager.update_task(task)
             
-            video_path = f"static/videos/{task_id}.mp4"
+            video_path = f"{DATA_DIR}/videos/{task_id}.mp4"
             success = video_service.synthesize(image_paths, audio_paths, video_path)
             
             if success:
@@ -261,7 +263,7 @@ async def upload_images(task_id: str, request: Request):
                 status_code=400
             )
         
-        task_dir = f"static/tasks/{task_id}"
+        task_dir = f"{DATA_DIR}/tasks/{task_id}"
         os.makedirs(f"{task_dir}/images", exist_ok=True)
         
         image_paths = []
@@ -407,8 +409,8 @@ async def cleanup_old_files():
     while True:
         await asyncio.sleep(3600)
         try:
-            tasks_dir = "static/tasks"
-            videos_dir = "static/videos"
+            tasks_dir = f"{DATA_DIR}/tasks"
+            videos_dir = f"{DATA_DIR}/videos"
             cutoff = datetime.now() - timedelta(hours=24)
             
             if os.path.exists(tasks_dir):
@@ -519,7 +521,7 @@ async def regenerate_task(task_id: str, request: Request):
     
     img_svc = modelscope_image_service
     
-    task_dir = f"static/tasks/{task_id}"
+    task_dir = f"{DATA_DIR}/tasks/{task_id}"
     os.makedirs(f"{task_dir}/images", exist_ok=True)
     os.makedirs(f"{task_dir}/audio", exist_ok=True)
     
@@ -549,7 +551,7 @@ async def regenerate_task(task_id: str, request: Request):
     audio_paths = [s.audio_path for s in task.segments if s.audio_path]
     
     if image_paths and audio_paths and len(image_paths) == len(task.segments):
-        video_path = f"static/videos/{task_id}.mp4"
+        video_path = f"{DATA_DIR}/videos/{task_id}.mp4"
         video_service.synthesize(image_paths, audio_paths, video_path)
         task.video_url = f"/static/videos/{task_id}.mp4"
         await task_manager.update_task(task)
@@ -573,7 +575,7 @@ async def regenerate_tts_task(task_id: str, request: Request):
     else:
         tts_svc = tts_service
     
-    task_dir = f"static/tasks/{task_id}"
+    task_dir = f"{DATA_DIR}/tasks/{task_id}"
     os.makedirs(f"{task_dir}/audio", exist_ok=True)
     
     for idx in edited_indices:
@@ -591,7 +593,7 @@ async def regenerate_tts_task(task_id: str, request: Request):
     audio_paths = [s.audio_path for s in task.segments if s.audio_path]
     
     if image_paths and audio_paths and len(image_paths) == len(task.segments):
-        video_path = f"static/videos/{task_id}.mp4"
+        video_path = f"{DATA_DIR}/videos/{task_id}.mp4"
         video_service.synthesize(image_paths, audio_paths, video_path)
         task.video_url = f"/static/videos/{task_id}.mp4"
         await task_manager.update_task(task)
