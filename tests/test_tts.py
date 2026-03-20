@@ -1,9 +1,5 @@
-from app.services.tts_edge import TTSService
+from app.services.tts_minimax import MiniMaxTTSService
 
-def test_tts_service_init():
-    service = TTSService()
+def test_tts_minimax_service_init():
+    service = MiniMaxTTSService()
     assert service is not None
-
-def test_tts_service_timeout():
-    service = TTSService()
-    assert service.timeout == 60

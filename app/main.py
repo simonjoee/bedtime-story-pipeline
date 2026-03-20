@@ -16,7 +16,6 @@ from datetime import datetime, timedelta
 from app.models import TaskStatus, Segment
 from app.task_manager import task_manager
 from app.services.image_modelscope import ModelScopeImageService
-from app.services.tts_edge import TTSService
 from app.services.tts_minimax import MiniMaxTTSService
 from app.services.polish_zhipu import PolishService
 from app.services.video import VideoService
@@ -26,7 +25,6 @@ from app.utils.text import split_text, split_text_by_duration
 from app.auth import verify_password, create_session, delete_session, get_session, COOKIE_NAME, cleanup_expired_sessions
 from app.middleware import AuthMiddleware
 
-tts_service = TTSService()
 tts_service_minimax = MiniMaxTTSService()
 
 logging.basicConfig(level=logging.INFO)
@@ -53,13 +51,12 @@ async def tasks_page(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "base_path": BASE_PATH})
 
 modelscope_image_service = ModelScopeImageService()
-tts_service = TTSService()
 polish_service = PolishService()
 video_service = VideoService()
 
 class GenerateRequest(BaseModel):
     story_text: str
-    tts_provider: str = "edge"
+    tts_provider: str = "minimax"
     image_provider: str = "modelscope"
     image_style: str = "cartoon"
     polish: bool = False
@@ -68,7 +65,7 @@ class GenerateRequest(BaseModel):
 class LoginRequest(BaseModel):
     password: str
 
-async def process_task(task_id: str, tts_provider: str = "edge", image_provider: str = "modelscope", image_style: str = "cartoon", polish: bool = False, narrator: str = "grandma"):
+async def process_task(task_id: str, tts_provider: str = "minimax", image_provider: str = "modelscope", image_style: str = "cartoon", polish: bool = False, narrator: str = "grandma"):
     task = await task_manager.get_task(task_id)
     if not task:
         return
@@ -77,10 +74,7 @@ async def process_task(task_id: str, tts_provider: str = "edge", image_provider:
     image_provider = task.image_provider or image_provider
     image_style = task.image_style or image_style
     
-    if tts_provider == "minimax":
-        tts_svc = tts_service_minimax
-    else:
-        tts_svc = tts_service
+    tts_svc = tts_service_minimax
     
     img_svc = modelscope_image_service
     

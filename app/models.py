@@ -25,7 +25,7 @@ class Task(BaseModel):
     error: Optional[dict] = None
     steps: Dict[str, dict] = {}
     created_at: Optional[datetime] = None
-    tts_provider: Optional[str] = "edge"
+    tts_provider: Optional[str] = "minimax"
     image_provider: Optional[str] = "modelscope"
     image_style: Optional[str] = "cartoon"
     polish: bool = False

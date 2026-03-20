@@ -33,7 +33,7 @@ class TaskManager:
                 error=json.loads(row['error']) if row.get('error') else None,
                 steps=json.loads(row['steps']) if row.get('steps') else {},
                 created_at=datetime.fromisoformat(row['created_at']) if row['created_at'] else None,
-                tts_provider=row.get('tts_provider', 'edge'),
+                tts_provider=row.get('tts_provider', 'minimax'),
                 image_provider=row.get('image_provider', 'huggingface'),
                 image_style=row.get('image_style', 'cartoon'),
                 polish=bool(row.get('polish', 0)),
@@ -44,7 +44,7 @@ class TaskManager:
             if task.status == TaskStatus.PROCESSING:
                 self._processing_count += 1
     
-    async def create_task(self, story_text: str, tts_provider: str = "edge", image_provider: str = "huggingface", image_style: str = "cartoon", polish: bool = False, narrator: str = "grandma") -> Task:
+    async def create_task(self, story_text: str, tts_provider: str = "minimax", image_provider: str = "huggingface", image_style: str = "cartoon", polish: bool = False, narrator: str = "grandma") -> Task:
         if self._processing_count >= self._max_concurrent:
             raise Exception("当前任务数已达上限，请稍后再试")
         

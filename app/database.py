@@ -20,7 +20,7 @@ async def init_db():
                 error TEXT,
                 steps TEXT,
                 created_at TEXT,
-                tts_provider TEXT DEFAULT 'edge',
+                tts_provider TEXT DEFAULT 'minimax',
                 image_provider TEXT DEFAULT 'huggingface',
                 image_style TEXT DEFAULT 'cartoon',
                 polish INTEGER DEFAULT 0,
@@ -33,7 +33,7 @@ async def init_db():
         except:
             pass
         try:
-            await db.execute("ALTER TABLE tasks ADD COLUMN tts_provider TEXT DEFAULT 'edge'")
+            await db.execute("ALTER TABLE tasks ADD COLUMN tts_provider TEXT DEFAULT 'minimax'")
         except:
             pass
         try:
