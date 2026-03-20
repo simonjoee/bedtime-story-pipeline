@@ -26,14 +26,6 @@ class VideoService:
             logger.error("FFmpeg not available")
             return False
         
-        demo_mode = os.getenv("DEMO_MODE", "false").lower() == "true"
-        
-        if demo_mode:
-            logger.info("Demo mode: creating placeholder video file")
-            with open(output_path, 'wb') as f:
-                f.write(b'DEMO_VIDEO')
-            return True
-        
         try:
             concat_list = []
             for i, (img, audio) in enumerate(zip(image_paths, audio_paths)):

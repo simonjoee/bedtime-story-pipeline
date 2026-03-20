@@ -91,6 +91,33 @@ async def process_task(task_id: str, tts_provider: str = "edge", image_provider:
         "video": {"status": "pending", "message": "等待中"}
     }
     
+    demo_mode = os.getenv("DEMO_MODE", "false").lower() == "true"
+    
+    if demo_mode:
+        raw_segments = [s.strip() for s in task.story_text.replace('\n', '。').split('。') if s.strip()]
+        task.segments = [Segment(text=t, image_prompt=t) for t in raw_segments]
+        
+        task_dir = f"static/tasks/{task_id}"
+        os.makedirs(f"{task_dir}/images", exist_ok=True)
+        os.makedirs(f"{task_dir}/audio", exist_ok=True)
+        os.makedirs("static/videos", exist_ok=True)
+        
+        video_path = f"static/videos/{task_id}.mp4"
+        with open(video_path, 'wb') as f:
+            f.write(b'DEMO_VIDEO')
+        
+        task.steps = {
+            "storyboard": {"status": "completed", "message": "演示模式"},
+            "tts": {"status": "completed", "message": "演示模式"},
+            "image": {"status": "completed", "message": "演示模式"},
+            "video": {"status": "completed", "message": "演示模式"},
+        }
+        task.progress = 100
+        task.status = TaskStatus.COMPLETED
+        task.video_url = f"/static/videos/{task_id}.mp4"
+        await task_manager.update_task(task)
+        return
+    
     try:
         async with asyncio.timeout(1800):
             task.progress = 5
@@ -125,7 +152,7 @@ async def process_task(task_id: str, tts_provider: str = "edge", image_provider:
                 img_svc.generate_for_segments(prompts, f"{task_dir}/images", image_style)
             )
             audio_task = asyncio.create_task(
-                tts_svc.generate_for_segments(texts, f"{task_dir}/audio")
+                tts_svc.generate_for_segments(texts, f"{task_dir}/audio", task.narrator)
             )
             
             image_result, audio_paths = await asyncio.gather(image_task, audio_task)

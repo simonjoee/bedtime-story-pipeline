@@ -4,39 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>登录 - 故事生成器</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-warm: #1c1915;
-            --bg-card: #262119;
-            --wood-dark: #3d2f1f;
-            --wood-medium: #5c4433;
-            --accent-gold: #d4a853;
-            --accent-copper: #c77d4a;
-            --text-light: #f5efe6;
-            --text-muted: #a89b8a;
-            --glow: rgba(212, 168, 83, 0.25);
+            --bg-deep: #0d0d12;
+            --bg-surface: #16161d;
+            --bg-card: #1e1e28;
+            --border: rgba(255, 255, 255, 0.06);
+            --accent-violet: #8b7cf6;
+            --accent-rose: #f472b6;
+            --accent-emerald: #34d399;
+            --accent-amber: #fbbf24;
+            --text-primary: #f4f4f5;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --glow-violet: rgba(139, 124, 246, 0.25);
+            --glow-rose: rgba(244, 114, 182, 0.2);
         }
         
         [data-theme="light"] {
-            --bg-warm: #f5efe6;
+            --bg-deep: #f5f5f7;
+            --bg-surface: #ffffff;
             --bg-card: #ffffff;
-            --wood-dark: #d4c4b0;
-            --wood-medium: #c9b89a;
-            --accent-gold: #b8943d;
-            --accent-copper: #a66d3d;
-            --text-light: #2d2a26;
-            --text-muted: #8a807a;
-            --glow: rgba(184, 148, 61, 0.2);
+            --border: rgba(0, 0, 0, 0.08);
+            --accent-violet: #7c6dd4;
+            --accent-rose: #e05a9e;
+            --accent-emerald: #22c55e;
+            --accent-amber: #d97706;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+            --glow-violet: rgba(124, 109, 212, 0.15);
+            --glow-rose: rgba(224, 90, 158, 0.15);
         }
         
         * { box-sizing: border-box; outline: none; }
         
         body {
-            font-family: 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
-            background: var(--bg-warm);
+            font-family: 'Noto Sans SC', 'DM Sans', sans-serif;
+            background: var(--bg-deep);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -45,7 +54,7 @@
             padding: 20px;
             position: relative;
             overflow: hidden;
-            transition: background 0.3s ease;
+            transition: background 0.3s ease, color 0.3s ease;
         }
         
         body::before {
@@ -55,29 +64,71 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: 
-                radial-gradient(ellipse at 20% 80%, rgba(94, 66, 41, 0.3) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 20%, rgba(61, 47, 31, 0.4) 0%, transparent 50%),
-                radial-gradient(ellipse at 50% 50%, rgba(92, 68, 51, 0.15) 0%, transparent 70%);
+            background:
+                radial-gradient(ellipse at 30% 20%, rgba(139, 124, 246, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(244, 114, 182, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 50%, rgba(139, 124, 246, 0.04) 0%, transparent 70%);
             pointer-events: none;
             transition: opacity 0.3s ease;
         }
         
         [data-theme="light"] body::before {
-            background: 
-                radial-gradient(ellipse at 20% 80%, rgba(212, 196, 176, 0.5) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 20%, rgba(201, 184, 154, 0.4) 0%, transparent 50%);
+            background:
+                radial-gradient(ellipse at 30% 20%, rgba(124, 109, 212, 0.1) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(224, 90, 158, 0.08) 0%, transparent 50%);
         }
         
-        .wood-grain {
+        .floating-particles {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-            opacity: 0.03;
             pointer-events: none;
+            overflow: hidden;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--accent-violet);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 8s infinite ease-in-out;
+        }
+        
+        .particle:nth-child(2) {
+            left: 20%;
+            top: 30%;
+            animation-delay: -2s;
+            background: var(--accent-rose);
+        }
+        
+        .particle:nth-child(3) {
+            left: 70%;
+            top: 20%;
+            animation-delay: -4s;
+            background: var(--accent-emerald);
+        }
+        
+        .particle:nth-child(4) {
+            left: 80%;
+            top: 60%;
+            animation-delay: -6s;
+            background: var(--accent-amber);
+        }
+        
+        .particle:nth-child(5) {
+            left: 40%;
+            top: 70%;
+            animation-delay: -3s;
+            background: var(--accent-violet);
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) scale(1); opacity: 0.3; }
+            50% { transform: translateY(-30px) scale(1.2); opacity: 0.6; }
         }
         
         .header-row {
@@ -90,9 +141,9 @@
             width: 44px;
             height: 44px;
             border-radius: 50%;
-            border: 2px solid rgba(212, 168, 83, 0.2);
+            border: 2px solid var(--border);
             background: var(--bg-card);
-            color: var(--accent-gold);
+            color: var(--text-primary);
             font-size: 20px;
             cursor: pointer;
             display: flex;
@@ -102,75 +153,95 @@
         }
         
         .theme-toggle:hover {
+            border-color: var(--accent-violet);
             transform: rotate(15deg);
-            border-color: var(--accent-gold);
         }
         
-        .login-card {
+        .login-container {
             position: relative;
-            background: var(--bg-card);
-            padding: 48px 40px;
-            border-radius: 24px;
-            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
             width: 100%;
             max-width: 420px;
-            text-align: center;
-            border: 1px solid rgba(212, 168, 83, 0.1);
-            animation: slideUp 0.6s ease-out;
-            transition: background 0.3s ease, box-shadow 0.3s ease;
+            animation: fadeIn 0.6s ease;
         }
         
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(40px); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
         
-        .book-icon {
-            font-size: 64px;
+        .login-card {
+            background: var(--bg-card);
+            border-radius: 24px;
+            padding: 48px 40px;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+        
+        .header-icon {
+            font-size: 56px;
             margin-bottom: 16px;
-            filter: drop-shadow(0 4px 12px var(--glow));
+            filter: drop-shadow(0 0 24px var(--glow-violet));
+            animation: pulse 3s infinite ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 24px var(--glow-violet)); }
+            50% { transform: scale(1.05); filter: drop-shadow(0 0 32px var(--glow-violet)); }
         }
         
         h1 {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 32px;
-            font-weight: 600;
-            color: var(--text-light);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
             margin: 0 0 8px;
-            letter-spacing: 2px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-violet) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .subtitle {
-            color: var(--text-muted);
-            margin-bottom: 40px;
+            color: var(--text-secondary);
             font-size: 14px;
+            margin: 0;
         }
         
         .input-group {
             margin-bottom: 24px;
         }
         
+        .input-label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        
         input[type="password"], input[type="text"] {
             width: 100%;
-            padding: 18px 24px;
-            border: 2px solid var(--wood-dark);
+            padding: 16px 20px;
+            border: 2px solid var(--border);
             border-radius: 14px;
-            font-size: 16px;
+            font-size: 15px;
             font-family: inherit;
-            background: rgba(0, 0, 0, 0.15);
-            color: var(--text-light);
+            background: var(--bg-surface);
+            color: var(--text-primary);
             text-align: center;
             transition: all 0.3s ease;
         }
         
-        [data-theme="light"] input[type="password"], 
-        [data-theme="light"] input[type="text"] {
-            background: rgba(0, 0, 0, 0.05);
-        }
-        
         input:focus {
-            border-color: var(--accent-gold);
-            box-shadow: 0 0 0 4px var(--glow);
+            border-color: var(--accent-violet);
+            box-shadow: 0 0 0 4px var(--glow-violet);
         }
         
         input::placeholder {
@@ -179,43 +250,42 @@
         
         .login-btn {
             width: 100%;
-            background: linear-gradient(135deg, var(--accent-gold) 0%, var(--accent-copper) 100%);
-            color: var(--bg-warm);
-            border: none;
             padding: 18px;
+            background: linear-gradient(135deg, var(--accent-violet) 0%, var(--accent-rose) 100%);
+            color: white;
+            border: none;
             border-radius: 14px;
             font-size: 16px;
             font-weight: 600;
             font-family: inherit;
             cursor: pointer;
             transition: all 0.3s ease;
-            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
         
         .login-btn:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 32px var(--glow);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px var(--glow-violet);
         }
         
         .login-btn:disabled {
-            opacity: 0.7;
+            opacity: 0.6;
             cursor: not-allowed;
             transform: none;
         }
         
         .error-msg {
-            color: #e88a6f;
+            color: var(--accent-rose);
             margin-top: 20px;
             font-size: 14px;
             display: none;
-            padding: 12px 16px;
-            background: rgba(232, 138, 111, 0.1);
-            border-radius: 8px;
-            border: 1px solid rgba(232, 138, 111, 0.2);
-        }
-        
-        [data-theme="light"] .error-msg {
-            color: #dc2626;
+            padding: 14px 16px;
+            background: rgba(244, 114, 182, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(244, 114, 182, 0.2);
         }
         
         .error-msg.show {
@@ -230,40 +300,72 @@
         }
         
         .hint {
-            margin-top: 32px;
+            margin-top: 28px;
             color: var(--text-muted);
             font-size: 12px;
-            opacity: 0.7;
+            text-align: center;
+        }
+        
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 24px 0;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
         }
         
         @media (max-width: 480px) {
             .login-card {
                 padding: 36px 24px;
             }
-            h1 { font-size: 26px; }
+            h1 { font-size: 24px; }
         }
     </style>
 </head>
 <body>
-    <div class="wood-grain"></div>
+    <div class="floating-particles">
+        <div class="particle" style="left: 10%; top: 20%;"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+    
     <div class="header-row">
         <button class="theme-toggle" id="themeToggle" title="切换主题">🌙</button>
     </div>
     
-    <div class="login-card">
-        <div class="book-icon">📚</div>
-        <h1>故事生成器</h1>
-        <div class="subtitle">请输入密码进入</div>
-        
-        <div class="input-group">
-            <input type="password" id="password" placeholder="输入密码" onkeypress="handleEnter(event)">
+    <div class="login-container">
+        <div class="login-card">
+            <header>
+                <div class="header-icon" id="headerIcon">🌙</div>
+                <h1>口袋里的造梦机</h1>
+                <p class="subtitle">请输入密码进入</p>
+            </header>
+            
+            <div class="input-group">
+                <label class="input-label" for="password">访问密码</label>
+                <input type="password" id="password" placeholder="输入密码" onkeypress="handleEnter(event)">
+            </div>
+            
+            <button class="login-btn" id="loginBtn" onclick="doLogin()">
+                <span>🚀</span>
+                <span>进入</span>
+            </button>
+            
+            <div class="error-msg" id="errorMsg"></div>
+            
+            <div class="hint">输入管理员密码以继续</div>
         </div>
-        
-        <button class="login-btn" id="loginBtn" onclick="doLogin()">登 录</button>
-        
-        <div class="error-msg" id="errorMsg"></div>
-        
-        <div class="hint">输入管理员密码以继续</div>
     </div>
     
     <script>
@@ -278,7 +380,10 @@
         }
         
         function updateThemeIcon(theme) {
-            document.getElementById('themeToggle').textContent = theme === 'dark' ? '☀️' : '🌙';
+            const btn = document.getElementById('themeToggle');
+            if (btn) btn.textContent = theme === 'dark' ? '☀️' : '🌙';
+            const headerIcon = document.getElementById('headerIcon');
+            if (headerIcon) headerIcon.textContent = theme === 'dark' ? '🌙' : '✨';
         }
         
         function toggleTheme() {
@@ -307,7 +412,7 @@
             
             const btn = document.getElementById('loginBtn');
             btn.disabled = true;
-            btn.textContent = '验证中...';
+            btn.innerHTML = '<span>验证中...</span>';
             
             try {
                 const resp = await fetch(basePath + '/api/login', {
@@ -326,7 +431,7 @@
                 showError('网络错误: ' + e.message);
             } finally {
                 btn.disabled = false;
-                btn.textContent = '登 录';
+                btn.innerHTML = '<span>🚀</span><span>进入</span>';
             }
         }
         

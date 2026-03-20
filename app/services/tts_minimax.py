@@ -6,22 +6,36 @@ from app.utils.retry import async_retry
 
 logger = logging.getLogger(__name__)
 
+NARRATOR_VOICE_MAP = {
+    "grandma": "female-tianmei",
+    "grandpa": "male-yunyang",
+    "mom": "female-qn-qingse",
+    "sister": "female-yunxi",
+    "brother": "male-qn-qingse",
+    "teacher": "male-yunfeng",
+}
+
+
 class MiniMaxTTSService:
     def __init__(self):
         self.access_token = os.getenv("MINIMAX_ACCESS_TOKEN", "")
-        self.model = os.getenv("MINIMAX_MODEL", "speech-02-turbo")
-        self.voice = os.getenv("MINIMAX_VOICE", "male-qn-qingse")
+        self.model = "speech-02-turbo"
         self.api_url = "https://api.minimaxi.com/v1/t2a_v2"
         self.timeout = 120
     
+    def _get_voice_id(self, narrator: str) -> str:
+        return NARRATOR_VOICE_MAP.get(narrator, NARRATOR_VOICE_MAP["grandma"])
+    
     @async_retry(max_attempts=3, base_delay=2)
-    async def text_to_speech(self, text: str, output_path: str) -> bool:
+    async def text_to_speech(self, text: str, output_path: str, narrator: str = "grandma") -> bool:
         if not self.access_token:
             logger.warning("MINIMAX_ACCESS_TOKEN not set")
             return False
         
         try:
             logger.info(f"Generating MiniMax TTS: {text[:30]}...")
+            
+            voice_id = self._get_voice_id(narrator)
             
             headers = {
                 "Authorization": f"Bearer {self.access_token}",
@@ -32,7 +46,7 @@ class MiniMaxTTSService:
                 "model": self.model,
                 "text": text,
                 "voice_setting": {
-                    "voice_id": self.voice
+                    "voice_id": voice_id
                 },
                 "audio_setting": {
                     "sample_rate": 32000,
@@ -67,12 +81,12 @@ class MiniMaxTTSService:
             logger.error(f"MiniMax TTS failed: {e}")
             raise
     
-    async def generate_for_segments(self, segments: list[str], output_dir: str) -> list[str]:
+    async def generate_for_segments(self, segments: list[str], output_dir: str, narrator: str = "grandma") -> list[str]:
         audio_paths = []
         for i, segment in enumerate(segments):
             output_path = os.path.join(output_dir, f"audio_{i}.mp3")
             try:
-                success = await self.text_to_speech(segment, output_path)
+                success = await self.text_to_speech(segment, output_path, narrator)
                 if success:
                     audio_paths.append(output_path)
                 else:
