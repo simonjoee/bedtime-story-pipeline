@@ -9,7 +9,7 @@ import shutil
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 
@@ -17,11 +17,10 @@ from app.models import TaskStatus, Segment
 from app.task_manager import task_manager
 from app.services.image_modelscope import ModelScopeImageService
 from app.services.tts_minimax import MiniMaxTTSService
-from app.services.polish_zhipu import PolishService
 from app.services.video import VideoService
 from app.services.youtube import youtube_service
 from app.services.storyboard import storyboard_service
-from app.utils.text import split_text, split_text_by_duration
+
 from app.auth import verify_password, create_session, delete_session, get_session, COOKIE_NAME, cleanup_expired_sessions
 from app.middleware import AuthMiddleware
 
@@ -52,21 +51,9 @@ async def tasks_page(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "base_path": BASE_PATH})
 
 modelscope_image_service = ModelScopeImageService()
-polish_service = PolishService()
 video_service = VideoService()
 
-class GenerateRequest(BaseModel):
-    story_text: str
-    tts_provider: str = "minimax"
-    image_provider: str = "modelscope"
-    image_style: str = "cartoon"
-    polish: bool = False
-    narrator: str = "grandma"
-
-class LoginRequest(BaseModel):
-    password: str
-
-async def process_task(task_id: str, tts_provider: str = "minimax", image_provider: str = "modelscope", image_style: str = "cartoon", polish: bool = False, narrator: str = "grandma"):
+async def process_task(task_id: str, tts_provider: str = "minimax", image_provider: str = "modelscope", image_style: str = "cartoon", narrator: str = "grandma"):
     task = await task_manager.get_task(task_id)
     if not task:
         return
@@ -220,10 +207,9 @@ async def process_task(task_id: str, tts_provider: str = "minimax", image_provid
 async def generate_video(request: Request):
     body = await request.json()
     story_text = body.get("story_text", "").strip()
-    tts_provider = body.get("tts_provider", "edge")  # "edge" or "minimax"
+    tts_provider = body.get("tts_provider", "minimax")  # "minimax" (only supported)
     image_provider = body.get("image_provider", "modelscope")
     image_style = body.get("image_style", "cartoon")  # cartoon, watercolor, realistic, oil_painting, 3d, illustration
-    polish = body.get("polish", False)  # 是否润色
     narrator = body.get("narrator", "grandma")  # 讲述人
     
     if not story_text:
@@ -233,14 +219,14 @@ async def generate_video(request: Request):
         )
     
     try:
-        task = await task_manager.create_task(story_text, tts_provider, image_provider, image_style, polish, narrator)
+        task = await task_manager.create_task(story_text, tts_provider, image_provider, image_style, narrator)
     except Exception as e:
         return JSONResponse(
             {"error": {"code": "TASK_QUEUE_FULL", "message": str(e)}},
             status_code=429
         )
     
-    asyncio.create_task(process_task(task.task_id, tts_provider, image_provider, image_style, polish, narrator))
+    asyncio.create_task(process_task(task.task_id, tts_provider, image_provider, image_style, narrator))
     
     return {"task_id": task.task_id, "status": "processing"}
 
@@ -274,7 +260,6 @@ async def upload_images(task_id: str, request: Request):
                 f.write(content)
             image_paths.append(image_path)
         
-        task.image_paths = image_paths
         await task_manager.update_task(task)
         
         return {"status": "ok", "image_count": len(image_paths)}
@@ -307,13 +292,6 @@ async def get_task(task_id: str):
         "image_provider": task.image_provider,
         "image_style": task.image_style
     }
-
-@app.delete(f"{BASE_PATH}/api/task/{{task_id}}")
-async def delete_task_v1(task_id: str):
-    success = await task_manager.delete_task(task_id)
-    if not success:
-        return JSONResponse({"error": {"code": "TASK_NOT_FOUND", "message": "任务不存在"}}, status_code=404)
-    return {"status": "ok"}
 
 @app.delete(f"{BASE_PATH}/api/task/{{task_id}}/delete")
 async def delete_task_v2(task_id: str):
@@ -371,8 +349,10 @@ async def health_check():
     return {"status": "ok"}
 
 @app.post(f"{BASE_PATH}/api/login")
-async def login(request: LoginRequest):
-    if verify_password(request.password):
+async def login(request: Request):
+    body = await request.json()
+    password = body.get("password", "")
+    if verify_password(password):
         session_id = create_session()
         response = JSONResponse({"status": "ok", "message": "登录成功"})
         response.set_cookie(
@@ -514,10 +494,7 @@ async def regenerate_task(task_id: str, request: Request):
     if not edited_indices:
         edited_indices = list(range(len(task.segments)))
     
-    if task.tts_provider == "minimax":
-        tts_svc = tts_service_minimax
-    else:
-        tts_svc = tts_service
+    tts_svc = tts_service_minimax
     
     img_svc = modelscope_image_service
     
@@ -570,10 +547,7 @@ async def regenerate_tts_task(task_id: str, request: Request):
     if not edited_indices:
         edited_indices = list(range(len(task.segments)))
     
-    if task.tts_provider == "minimax":
-        tts_svc = tts_service_minimax
-    else:
-        tts_svc = tts_service
+    tts_svc = tts_service_minimax
     
     task_dir = f"{DATA_DIR}/tasks/{task_id}"
     os.makedirs(f"{task_dir}/audio", exist_ok=True)

@@ -28,6 +28,5 @@ class Task(BaseModel):
     tts_provider: Optional[str] = "minimax"
     image_provider: Optional[str] = "modelscope"
     image_style: Optional[str] = "cartoon"
-    polish: bool = False
     narrator: str = "grandma"
     segments: list[Segment] = []

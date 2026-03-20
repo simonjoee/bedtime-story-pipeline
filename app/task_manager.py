@@ -36,7 +36,6 @@ class TaskManager:
                 tts_provider=row.get('tts_provider', 'minimax'),
                 image_provider=row.get('image_provider', 'huggingface'),
                 image_style=row.get('image_style', 'cartoon'),
-                polish=bool(row.get('polish', 0)),
                 narrator=row.get('narrator', 'grandma'),
                 segments=segments
             )
@@ -44,13 +43,13 @@ class TaskManager:
             if task.status == TaskStatus.PROCESSING:
                 self._processing_count += 1
     
-    async def create_task(self, story_text: str, tts_provider: str = "minimax", image_provider: str = "huggingface", image_style: str = "cartoon", polish: bool = False, narrator: str = "grandma") -> Task:
+    async def create_task(self, story_text: str, tts_provider: str = "minimax", image_provider: str = "huggingface", image_style: str = "cartoon", narrator: str = "grandma") -> Task:
         if self._processing_count >= self._max_concurrent:
             raise Exception("当前任务数已达上限，请稍后再试")
         
         task_id = str(uuid.uuid4())
         now = datetime.now()
-        task = Task(task_id=task_id, story_text=story_text, created_at=now, tts_provider=tts_provider, image_provider=image_provider, image_style=image_style, polish=polish, narrator=narrator, segments=[])
+        task = Task(task_id=task_id, story_text=story_text, created_at=now, tts_provider=tts_provider, image_provider=image_provider, image_style=image_style, narrator=narrator, segments=[])
         self.tasks[task_id] = task
         self._processing_count += 1
         
@@ -67,7 +66,6 @@ class TaskManager:
             tts_provider=tts_provider,
             image_provider=image_provider,
             image_style=image_style,
-            polish=polish,
             narrator=narrator
         )
         return task
@@ -90,7 +88,6 @@ class TaskManager:
             tts_provider=task.tts_provider,
             image_provider=task.image_provider,
             image_style=task.image_style,
-            polish=task.polish,
             narrator=task.narrator,
             segments=[s.model_dump() for s in task.segments] if task.segments else None
         )

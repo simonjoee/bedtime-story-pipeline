@@ -1031,13 +1031,6 @@
                         </div>
                     </div>
                     
-                    <div class="options-grid" style="grid-template-columns: 1fr;">
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="polishToggle">
-                            <span>润色故事（使语言更口语化，适合儿童）</span>
-                        </div>
-                    </div>
-                    
                     <button class="btn-primary" id="generateBtn" onclick="generateVideo()">
                         <span>🎬 开始生成视频</span>
                     </button>
@@ -1705,7 +1698,6 @@
             const ttsProvider = document.getElementById('ttsProvider').value;
             const imageProvider = document.getElementById('imageProvider').value;
             const imageStyle = document.getElementById('imageStyle').value;
-            const polish = document.getElementById('polishToggle').checked;
             const narrator = document.getElementById('narrator').value;
             
             const btn = document.getElementById('generateBtn');
@@ -1725,7 +1717,6 @@
                         tts_provider: ttsProvider,
                         image_provider: imageProvider,
                         image_style: imageStyle,
-                        polish: polish,
                         narrator: narrator
                     })
                 });
