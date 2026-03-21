@@ -797,6 +797,28 @@
             animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
             overflow-y: auto;
         }
+
+        #storyboardModal .modal-card {
+            padding: 0;
+            max-width: 680px;
+        }
+
+        #storyboardModal .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            margin-bottom: 0;
+        }
+
+        #storyboardModal .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        #storyboardBody {
+            padding: 20px 24px;
+        }
         
         @keyframes modalIn {
             from { opacity: 0; transform: scale(0.95) translateY(20px); }
@@ -1067,6 +1089,30 @@
         .sb-btn-primary:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 30px rgba(139, 124, 246, 0.4);
+        }
+
+        .sb-btn-download {
+            flex: 1;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent-emerald), #10b981);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(52, 211, 153, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .sb-btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(52, 211, 153, 0.4);
         }
 
         .icon-btn {
@@ -1375,7 +1421,7 @@
                 <div class="modal-title">📝 故事板</div>
                 <button class="close-modal" onclick="closeStoryboardModal()">&times;</button>
             </div>
-            <div id="storyboardBody" style="max-height: calc(90vh - 120px); overflow-y: auto;"></div>
+            <div id="storyboardBody"></div>
         </div>
     </div>
     
@@ -1564,7 +1610,7 @@
                         const createdTime = task.created_at ? new Date(task.created_at).toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '-';
                         
                         return `
-                            <div class="task-card" onclick="showDetail('${task.task_id}')">
+                            <div class="task-card">
                                 <div class="mobile-card-header">
                                     <div class="mobile-card-info">
                                         <span class="mobile-card-id">${task.task_id.substring(0, 8)}</span>
@@ -1697,8 +1743,8 @@
                         <div class="detail-label">生成视频</div>
                         <video controls src="${basePath}${task.video_url}"></video>
                         <div style="margin-top:12px; display:flex; gap:8px; justify-content:flex-end">
-                            <button class="btn-sm" onclick="closeModal()" style="background:rgba(255,255,255,0.1); color:var(--text-secondary);">关闭</button>
-                            <a href="${basePath}${task.video_url}" download class="btn-sm btn-view" style="text-decoration:none;">⬇ 下载</a>
+                            <a href="${basePath}${task.video_url}" download class="sb-btn-download" style="text-decoration:none;">⬇ 下载</a>
+                            <button class="sb-btn-close" onclick="closeModal()">关闭</button>
                         </div>
                     </div>
                     ` : ''}
@@ -1784,8 +1830,8 @@
                 
                 html += `
                     <div class="sb-footer">
-                        <button class="sb-btn-close" onclick="closeStoryboardModal()">← 返回</button>
                         <button class="sb-btn-primary" onclick="regenerateStoryboard()">🎬 重新合成视频</button>
+                        <button class="sb-btn-close" onclick="closeStoryboardModal()">关闭</button>
                     </div>
                 `;
                 
