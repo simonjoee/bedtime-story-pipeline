@@ -454,6 +454,7 @@
                 border-radius: 20px;
                 overflow: hidden;
                 box-shadow: var(--shadow-soft);
+                margin-bottom: 16px;
             }
             
             .task-list-mobile .task-card:hover {
@@ -507,7 +508,7 @@
                 gap: 8px;
                 padding: 16px 20px;
                 border-top: 1px solid var(--border);
-                background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.1) 100%);
+                background: linear-gradient(180deg, transparent 0%, rgba(139, 124, 246, 0.05) 100%);
             }
             
             .mobile-card-actions .btn-sm {
@@ -832,6 +833,240 @@
         .close-modal:hover {
             background: var(--accent-rose);
             color: white;
+        }
+
+        .sb-segment {
+            background: var(--bg-surface);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .sb-segment:hover {
+            border-color: rgba(139, 124, 246, 0.25);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        @keyframes sbFadeIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .sb-segment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .sb-segment-number {
+            font-size: 16px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--accent-violet), var(--accent-rose));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .sb-badge {
+            font-size: 10px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(139, 124, 246, 0.15);
+            color: var(--accent-violet);
+            border: 1px solid rgba(139, 124, 246, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sb-field {
+            margin-bottom: 14px;
+        }
+
+        .sb-field label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .sb-field textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 13px;
+            font-family: 'Noto Sans SC', 'DM Sans', sans-serif;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        .sb-field textarea:focus {
+            outline: none;
+            border-color: var(--accent-violet);
+            box-shadow: 0 0 0 3px rgba(139, 124, 246, 0.15);
+        }
+
+        .sb-image-container {
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        .sb-image {
+            width: 100%;
+            max-height: 180px;
+            object-fit: cover;
+            display: block;
+            cursor: zoom-in;
+            transition: transform 0.3s ease;
+        }
+
+        .sb-image:hover {
+            transform: scale(1.02);
+        }
+
+        .sb-placeholder {
+            height: 100px;
+            background: linear-gradient(135deg, rgba(139, 124, 246, 0.08), rgba(244, 114, 182, 0.08));
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: var(--text-muted);
+            font-size: 13px;
+            margin-top: 12px;
+        }
+
+        .sb-placeholder-small {
+            height: 44px;
+            flex-direction: row;
+            font-size: 12px;
+        }
+
+        .sb-audio {
+            margin-top: 12px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .sb-audio-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .sb-audio-player {
+            width: 100%;
+            height: 40px;
+            border-radius: 8px;
+        }
+
+        .sb-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .sb-btn {
+            flex: 1;
+            padding: 12px 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .sb-btn-img {
+            background: rgba(52, 211, 153, 0.15);
+            color: var(--accent-emerald);
+            border: 1px solid rgba(52, 211, 153, 0.25);
+        }
+
+        .sb-btn-img:hover {
+            background: var(--accent-emerald);
+            color: white;
+            box-shadow: 0 4px 16px rgba(52, 211, 153, 0.3);
+        }
+
+        .sb-btn-tts {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--accent-amber);
+            border: 1px solid rgba(251, 191, 36, 0.25);
+        }
+
+        .sb-btn-tts:hover {
+            background: var(--accent-amber);
+            color: white;
+            box-shadow: 0 4px 16px rgba(251, 191, 36, 0.3);
+        }
+
+        .sb-footer {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .sb-btn-close {
+            flex: 1;
+            padding: 14px;
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .sb-btn-close:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-color: var(--text-muted);
+        }
+
+        .sb-btn-primary {
+            flex: 2;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent-violet), var(--accent-rose));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'DM Sans', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(139, 124, 246, 0.3);
+        }
+
+        .sb-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(139, 124, 246, 0.4);
         }
 
         .icon-btn {
@@ -1508,37 +1743,49 @@
                 
                 let html = '';
                 data.segments.forEach((seg, idx) => {
+                    const romanNumeral = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'][idx] || (idx + 1);
                     html += `
-                        <div style="background:var(--bg-surface); border-radius:12px; padding:16px; margin-bottom:16px;">
-                            <div style="font-weight:600; margin-bottom:12px; color:var(--accent-violet)">片段 ${idx + 1}</div>
-                            <div style="margin-bottom:12px">
-                                <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">故事文本</div>
-                                <textarea id="sb-text-${idx}" rows="2" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card); color:var(--text-primary); font-size:13px; resize:vertical;">${seg.text || ''}</textarea>
+                        <div class="sb-segment" style="animation: sbFadeIn 0.4s ease backwards; animation-delay: ${idx * 0.08}s;">
+                            <div class="sb-segment-header">
+                                <span class="sb-segment-number">片段 ${romanNumeral}</span>
+                                <span class="sb-badge">${seg.image_path ? '图文' : '待生成'}</span>
                             </div>
-                            <div>
-                                <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">图片 Prompt</div>
-                                <textarea id="sb-prompt-${idx}" rows="2" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:8px; background:var(--bg-card); color:var(--text-primary); font-size:13px; resize:vertical;">${seg.image_prompt || ''}</textarea>
+                            <div class="sb-field">
+                                <label>故事文本</label>
+                                <textarea id="sb-text-${idx}" rows="2" placeholder="在此编辑故事内容...">${seg.text || ''}</textarea>
                             </div>
-                            ${seg.image_path ? `<img src="${basePath}/${seg.image_path}?t=${Date.now()}" style="width:100%; max-height:160px; object-fit:contain; margin-top:12px; border-radius:8px; background:var(--bg-deep); cursor:zoom-in;" alt="图片" onclick="openImageModal('${basePath}/${seg.image_path}?t=${Date.now()}')">` : '<div style="height:80px; background:var(--bg-deep); border-radius:8px; margin-top:12px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;">图片未生成</div>'}
-                            ${seg.audio_path ? `
-                            <div style="margin-top:12px; background:var(--bg-deep); border-radius:8px; padding:10px;">
-                                <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase;">🔊 音频预览</div>
-                                <audio controls style="width:100%; height:36px;">
-                                    <source src="${basePath}/${seg.audio_path}?t=${Date.now()}" type="audio/mpeg">
-                                </audio>
-                            </div>` : '<div style="height:40px; background:var(--bg-deep); border-radius:8px; margin-top:12px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;">🔊 音频生成中...</div>'}
-                            <div style="margin-top:12px; display:flex; gap:8px;">
-                                <button id="regen-img-${idx}" onclick="regenerateOneSegment(${idx})" style="flex:1; padding:10px; background:var(--accent-emerald); color:white; border:none; border-radius:8px; cursor:pointer; font-size:12px; font-family:inherit;">🖼️ 重新生成图片</button>
-                                <button id="regen-tts-${idx}" onclick="regenerateOneTTS(${idx})" style="flex:1; padding:10px; background:var(--accent-copper, var(--accent-amber)); color:var(--bg-deep); border:none; border-radius:8px; cursor:pointer; font-size:12px; font-family:inherit;">🔊 重新生成音频</button>
+                            <div class="sb-field">
+                                <label>图片 Prompt</label>
+                                <textarea id="sb-prompt-${idx}" rows="2" placeholder="描述画面内容...">${seg.image_prompt || ''}</textarea>
+                            </div>
+                            ${seg.image_path 
+                                ? `<div class="sb-image-container">
+                                    <img src="${basePath}/${seg.image_path}?t=${Date.now()}" class="sb-image" alt="图片" onclick="openImageModal('${basePath}/${seg.image_path}?t=${Date.now()}')">
+                                   </div>`
+                                : `<div class="sb-placeholder">
+                                    <span>🖼️</span>
+                                    <span>图片生成中...</span>
+                                   </div>`}
+                            ${seg.audio_path 
+                                ? `<div class="sb-audio">
+                                    <div class="sb-audio-label">🔊 音频预览</div>
+                                    <audio controls class="sb-audio-player">
+                                        <source src="${basePath}/${seg.audio_path}?t=${Date.now()}" type="audio/mpeg">
+                                    </audio>
+                                   </div>`
+                                : `<div class="sb-placeholder sb-placeholder-small">🔊 音频生成中...</div>`}
+                            <div class="sb-actions">
+                                <button id="regen-img-${idx}" class="sb-btn sb-btn-img" onclick="regenerateOneSegment(${idx})">🖼️ 重新生成图片</button>
+                                <button id="regen-tts-${idx}" class="sb-btn sb-btn-tts" onclick="regenerateOneTTS(${idx})">🔊 重新生成音频</button>
                             </div>
                         </div>
                     `;
                 });
                 
                 html += `
-                    <div style="display:flex; gap:12px;">
-                        <button onclick="closeStoryboardModal()" style="flex:1; padding:14px; background:var(--bg-surface); color:var(--text-secondary); border:none; border-radius:10px; cursor:pointer; font-size:14px; font-family:inherit;">关闭</button>
-                        <button onclick="regenerateStoryboard()" style="flex:2; padding:14px; background:linear-gradient(135deg, var(--accent-emerald), #10b981); color:white; border:none; border-radius:10px; cursor:pointer; font-size:14px; font-weight:600; font-family:inherit;">🎬 重新合成视频</button>
+                    <div class="sb-footer">
+                        <button class="sb-btn-close" onclick="closeStoryboardModal()">← 返回</button>
+                        <button class="sb-btn-primary" onclick="regenerateStoryboard()">🎬 重新合成视频</button>
                     </div>
                 `;
                 
