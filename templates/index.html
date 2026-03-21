@@ -1264,6 +1264,7 @@
         
         <div class="tabs">
             <button class="tab-btn" onclick="showTab('generate')" id="nav-generate">✨ 生成故事</button>
+            <button class="tab-btn" onclick="showTab('book-summary')" id="nav-book-summary">📚 书籍总结</button>
             <button class="tab-btn active" onclick="showTab('tasks')" id="nav-tasks">📋 历史任务</button>
         </div>
         
@@ -1327,6 +1328,55 @@
                     </div>
                     
                     <div id="result" style="margin-top: 24px;"></div>
+                </div>
+            </div>
+            
+            <div id="tab-book-summary" class="tab-pane">
+                <div class="card">
+                    <div class="card-title">📚 输入书名</div>
+                    <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                        <input type="text" id="bookName" placeholder="请输入书名，如：小王子"
+                               style="flex: 1; padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px;
+                                      background: var(--bg-surface); color: var(--text-primary); font-size: 15px;">
+                        <button class="btn-primary" id="summaryBtn" onclick="generateBookSummary()"
+                                style="padding: 14px 24px;">
+                            <span>🔍 生成总结</span>
+                        </button>
+                    </div>
+
+                    <div class="card-title" style="margin-top: 24px;">📝 故事化总结</div>
+                    <textarea id="summaryText" placeholder="生成的总结将显示在这里，您可以编辑修改..."
+                              style="min-height: 200px;"></textarea>
+
+                    <div class="options-grid" style="margin-top: 16px;">
+                        <div class="option-group">
+                            <label>图像风格</label>
+                            <select id="summaryImageStyle">
+                                <option value="watercolor">水彩画</option>
+                                <option value="cartoon">卡通/动漫</option>
+                                <option value="3d">3D动画</option>
+                                <option value="illustration">插画</option>
+                                <option value="oil_painting">油画</option>
+                                <option value="realistic">写实</option>
+                            </select>
+                        </div>
+                        <div class="option-group">
+                            <label>叙述者</label>
+                            <select id="summaryNarrator">
+                                <option value="grandma">慈祥奶奶</option>
+                                <option value="grandpa">和蔼爷爷</option>
+                                <option value="mom">温柔妈妈</option>
+                                <option value="sister">活泼姐姐</option>
+                                <option value="brother">调皮哥哥</option>
+                                <option value="teacher">温柔老师</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" id="toStoryBtn" onclick="generateVideoFromSummary()"
+                            style="margin-top: 20px; background: linear-gradient(135deg, var(--accent-emerald), #10b981);">
+                        <span>🎬 生成视频</span>
+                    </button>
                 </div>
             </div>
             
@@ -2042,6 +2092,79 @@
             const btn = document.getElementById('generateBtn');
             btn.disabled = false;
             btn.innerHTML = '<span>🎬 开始生成视频</span>';
+        }
+
+        async function generateBookSummary() {
+            const bookName = document.getElementById('bookName').value.trim();
+            if (!bookName) {
+                showToast('请输入书名', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('summaryBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ 生成中...</span>';
+
+            try {
+                const resp = await fetch(basePath + '/api/book-summary', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ book_name: bookName })
+                });
+                const data = await resp.json();
+
+                if (data.error) {
+                    showToast(data.error.message || '生成失败', 'error');
+                } else {
+                    document.getElementById('summaryText').value = data.summary;
+                    showToast('总结生成成功！', 'success');
+                }
+            } catch (e) {
+                showToast('网络错误: ' + e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🔍 重新生成</span>';
+            }
+        }
+
+        async function generateVideoFromSummary() {
+            const summaryText = document.getElementById('summaryText').value.trim();
+            if (!summaryText) {
+                showToast('请先生成总结', 'error');
+                return;
+            }
+
+            const imageStyle = document.getElementById('summaryImageStyle').value;
+            const narrator = document.getElementById('summaryNarrator').value;
+
+            const btn = document.getElementById('toStoryBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span>⏳ 提交中...</span>';
+
+            try {
+                const resp = await fetch(basePath + '/api/generate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        story_text: summaryText,
+                        image_style: imageStyle,
+                        narrator: narrator
+                    })
+                });
+                const data = await resp.json();
+
+                if (data.error) {
+                    showToast(data.error.message || '生成失败', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>🎬 生成视频</span>';
+                } else {
+                    window.location.href = basePath + '/tasks';
+                }
+            } catch (e) {
+                showToast('网络错误: ' + e.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<span>🎬 生成视频</span>';
+            }
         }
         
         async function uploadToYouTube(taskId) {

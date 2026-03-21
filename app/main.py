@@ -20,6 +20,7 @@ from app.services.tts_minimax import MiniMaxTTSService
 from app.services.video import VideoService
 from app.services.youtube import youtube_service
 from app.services.storyboard import storyboard_service
+from app.services.book_summary import book_summary_service
 
 from app.auth import verify_password, create_session, delete_session, get_session, COOKIE_NAME, cleanup_expired_sessions
 from app.middleware import AuthMiddleware
@@ -229,6 +230,20 @@ async def generate_video(request: Request):
     asyncio.create_task(process_task(task.task_id, tts_provider, image_provider, image_style, narrator))
     
     return {"task_id": task.task_id, "status": "processing"}
+
+@app.post(f"{BASE_PATH}/api/book-summary")
+async def book_summary(request: Request):
+    body = await request.json()
+    book_name = body.get("book_name", "").strip()
+
+    if not book_name:
+        return JSONResponse(
+            {"error": {"code": "INVALID_INPUT", "message": "书名不能为空"}},
+            status_code=400
+        )
+
+    result = await book_summary_service.generate_summary(book_name)
+    return result
 
 @app.post(f"{BASE_PATH}/api/upload-images/{{task_id}}")
 async def upload_images(task_id: str, request: Request):
